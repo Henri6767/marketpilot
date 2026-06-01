@@ -26,7 +26,7 @@
         <a href="#pricing">Preise</a>
       </nav>
       <div class="topbar-actions">
-        <button class="data-status-pill" id="dataSourceButton" type="button">Daten: Live/Demo</button>
+        <button class="data-status-pill" id="dataSourceButton" type="button">Daten: Live/Cache</button>
         <span class="nav-pro-status" id="navProStatus">Free</span>
         <button class="access-pill" id="accessCodeButton" type="button">Nexus Code</button>
         <a class="login-link" href="#legal">Login</a>
@@ -47,8 +47,8 @@
             Aktien, ETFs, Krypto, News, Risiken und Watchlist-Bewegungen werden in ein klares tägliches Briefing übersetzt. Schnell, datenreich und ohne persönliche Anlageberatung.
           </p>
           <div class="hero-actions">
-            <a class="primary-action" href="#briefing">Dashboard öffnen</a>
-            <a class="secondary-action" href="#markets">Märkte ansehen</a>
+            <a class="primary-action" href="#watchlist">Watchlist starten</a>
+            <a class="secondary-action" href="#briefing">Live-Dashboard ansehen</a>
           </div>
           <div class="quick-actions" aria-label="Schnellaktionen">
             <button type="button" data-quick-action="search">Asset suchen</button>
@@ -64,49 +64,36 @@
             <span>Smart Alerts</span>
             <span>News Impact</span>
             <span>Keine Anlageberatung</span>
-            <span>Live/Demo-Daten</span>
+            <span>Live/Cache-Daten</span>
           </div>
         </div>
 
         <aside class="hero-panel cockpit-preview" aria-label="Live-Datenstatus">
-          <div class="cockpit-orbit-layer" aria-hidden="true">
-            <span></span><span></span><span></span>
-          </div>
           <div class="cockpit-topline">
             <div class="status-line">
               <span class="signal" id="liveSignal" aria-hidden="true"></span>
-              <span id="dataStatus">Datenstatus wird geprüft</span>
+              <span id="dataStatus">Daten werden aktualisiert</span>
             </div>
             <span class="cockpit-badge">Nexus OS</span>
           </div>
           <div class="cockpit-stack">
-            <div class="hero-metric cockpit-main-card">
+            <div class="hero-focus-card cockpit-main-card">
               <span class="panel-label">Aktueller Fokus</span>
-              <strong id="heroAsset">Bitcoin</strong>
-              <canvas class="mini-chart" id="heroChart" width="330" height="110" aria-label="Mini-Kurschart"></canvas>
-              <div class="panel-grid">
-                <span>Kurs <b id="heroPrice">Wird geladen</b></span>
-                <span>Trend <b id="heroTrend">Wird geladen</b></span>
-                <span>Quelle <b id="heroSource">Wird geprüft</b></span>
+              <div class="hero-focus-title">
+                <strong id="heroAsset">Bitcoin</strong>
+                <span id="heroSymbol">BTC</span>
+              </div>
+              <canvas class="hero-sparkline" id="heroChart" width="520" height="140" aria-label="Kompakte Kursvorschau"></canvas>
+              <div class="panel-grid hero-kpis">
+                <span>Kurs <b id="heroPrice">Letzter Stand</b></span>
+                <span>Trend <b id="heroTrend">Heute</b></span>
+                <span>Quelle <b id="heroSource">Demo-Modus</b></span>
               </div>
             </div>
             <div class="ai-insight-card cockpit-float-card">
               <span class="panel-label">AI Insight</span>
               <strong id="heroInsight">Neutral</strong>
-              <p>Signalstärke, Datenqualität und Risiko werden laufend eingeordnet.</p>
-            </div>
-          </div>
-          <div class="cockpit-visual-grid">
-            <div class="mini-heatmap" aria-label="Mini Heatmap">
-              <span></span><span></span><span></span><span></span><span></span><span></span>
-            </div>
-            <div class="risk-orbit" aria-label="Risk Radar">
-              <i></i><i></i><i></i>
-            </div>
-            <div class="performance-chips">
-              <span>BTC +</span>
-              <span>NVDA +</span>
-              <span>ETF</span>
+              <p id="heroInsightText">Momentum und Datenqualität werden neutral eingeordnet.</p>
             </div>
           </div>
           <div class="hero-cockpit-grid" aria-label="Market Cockpit Vorschau">
@@ -123,17 +110,19 @@
               <strong>3 Signale</strong>
             </button>
             <button type="button" data-quick-action="alert">
-              <span>AI Insight</span>
+              <span>Risk Radar</span>
               <strong>Risiko Radar</strong>
             </button>
-          </div>
-          <div class="hero-signal-rail" aria-hidden="true">
-            <span></span><span></span><span></span><span></span><span></span>
           </div>
         </aside>
       </section>
 
       <section class="dashboard-grid-section" aria-label="Dashboard Widgets">
+        <div class="section-heading compact">
+          <p class="eyebrow">Heute auf einen Blick</p>
+          <h2>Was jetzt wichtig ist</h2>
+          <p>Marktstimmung, Top Mover, Risiken, News Impact, Watchlist und Alerts sind direkt klickbar.</p>
+        </div>
         <div class="today-strip" id="todayStrip" aria-label="Heute wichtig">
           <article>
             <span class="panel-label">Heute wichtig</span>
@@ -142,7 +131,7 @@
           </article>
           <article>
             <span class="panel-label">Watchlist Check</span>
-            <strong id="todayWatchlist">Noch keine Watchlist</strong>
+            <strong id="todayWatchlist">Watchlist starten</strong>
             <p id="todayWatchlistReason">Speichere Werte, um tägliche Veränderungen schneller zu sehen.</p>
           </article>
           <article>
@@ -154,12 +143,12 @@
         <div class="retention-grid" aria-label="Persönliches Cockpit">
           <button type="button" data-widget-target="#briefing">
             <span class="panel-label">Seit deinem letzten Besuch</span>
-            <strong id="retentionVisit">Briefing wird vorbereitet</strong>
+            <strong id="retentionVisit">AI Briefing bereit</strong>
             <p>Neue Bewegungen, Datenstatus und Watchlist-Signale werden priorisiert.</p>
           </button>
           <button type="button" data-widget-target="#watchlist">
             <span class="panel-label">Watchlist braucht Aufmerksamkeit</span>
-            <strong id="retentionWatchlist">Noch keine Watchlist</strong>
+            <strong id="retentionWatchlist">3 Werte hinzufügen</strong>
             <p>Persönliche Pulse-Checks machen tägliche Rückkehr sinnvoll.</p>
           </button>
           <button type="button" data-widget-target="#alerts">
@@ -181,12 +170,12 @@
           </button>
           <button class="dashboard-widget" type="button" data-widget-target="#markets">
             <span>Stärkste Bewegung</span>
-            <strong id="widgetTopMover">Wird geladen</strong>
+            <strong id="widgetTopMover">Top Mover</strong>
             <small>Top Gewinner und Verlierer</small>
           </button>
           <button class="dashboard-widget warning" type="button" data-widget-target="#briefing">
             <span>Risk Radar</span>
-            <strong id="widgetRisk">Volatilität wird geprüft</strong>
+            <strong id="widgetRisk">Risk Radar aktiv</strong>
             <small>Warnungen und Ausreißer</small>
           </button>
           <button class="dashboard-widget" type="button" data-widget-target="#watchlist">
@@ -196,7 +185,7 @@
           </button>
           <button class="dashboard-widget" type="button" data-widget-target="#news">
             <span>News Impact</span>
-            <strong>3 Demo-News</strong>
+            <strong>3 Impact-Signale</strong>
             <small>Kuratiert nach Relevanz</small>
           </button>
           <button class="dashboard-widget" type="button" data-widget-target="#alerts">
@@ -220,23 +209,23 @@
       <section class="market-strip" id="tickerGrid" aria-label="Klickbare Marktübersicht">
         <article class="skeleton-card">
           <span>Bitcoin</span>
-          <strong>Wird geladen</strong>
-          <small>Live-Daten werden angefragt</small>
+          <strong>Letzter Stand</strong>
+          <small>Quelle wird aktualisiert</small>
         </article>
         <article class="skeleton-card">
           <span>Nvidia</span>
-          <strong>Wird geladen</strong>
-          <small>Live-Daten werden angefragt</small>
+          <strong>Letzter Stand</strong>
+          <small>Quelle wird aktualisiert</small>
         </article>
         <article class="skeleton-card">
           <span>S&P 500 ETF</span>
-          <strong>Wird geladen</strong>
-          <small>Live-Daten werden angefragt</small>
+          <strong>Letzter Stand</strong>
+          <small>Quelle wird aktualisiert</small>
         </article>
         <article class="skeleton-card">
           <span>MSCI World ETF</span>
-          <strong>Wird geladen</strong>
-          <small>Live-Daten werden angefragt</small>
+          <strong>Letzter Stand</strong>
+          <small>Quelle wird aktualisiert</small>
         </article>
       </section>
 
@@ -269,7 +258,7 @@
         <div class="section-heading compact">
           <p class="eyebrow">Was heute wichtig ist</p>
           <h2>AI Daily Briefing</h2>
-          <p id="dailyBriefing">Live-Daten werden geladen. Danach entsteht hier eine verständliche Markteinordnung.</p>
+          <p id="dailyBriefing">Dein kompaktes Marktbriefing fasst Bewegung, Risiko, Watchlist und News Impact zusammen.</p>
         </div>
         <div class="briefing-tabs" aria-label="Briefing-Module">
           <button class="active" type="button" data-briefing-tab="overview">Marktüberblick</button>
@@ -375,7 +364,7 @@
                 <option value="Alle">Alle Datenstatus</option>
                 <option value="live">Live</option>
                 <option value="delayed">Verzögert</option>
-                <option value="demo">Demo</option>
+                <option value="demo">Fallback</option>
                 <option value="cache">Cache</option>
                 <option value="failed">Fehler</option>
               </select>
@@ -395,14 +384,14 @@
                 <p id="detailSymbol">BTC</p>
               </div>
               <div class="price-stack">
-                <strong id="detailPrice">Daten werden geladen</strong>
-                <span id="detailChange">Zeitraum wird geprüft</span>
+                <strong id="detailPrice">Letzter Stand</strong>
+                <span id="detailChange">Zeitraum: Heute</span>
               </div>
             </div>
 
             <div class="detail-tabs" id="detailTabs" role="tablist" aria-label="Asset-Detail-Tabs">
-              <button class="active" type="button" data-detail-tab="overview">Übersicht</button>
-              <button type="button" data-detail-tab="chart">Chart</button>
+              <button class="active" type="button" data-detail-tab="chart">Chart</button>
+              <button type="button" data-detail-tab="overview">Übersicht</button>
               <button type="button" data-detail-tab="ai">AI Analyse</button>
               <button type="button" data-detail-tab="metrics">Kennzahlen</button>
               <button type="button" data-detail-tab="news">News</button>
@@ -411,7 +400,7 @@
               <button type="button" data-detail-tab="alerts">Alarme</button>
             </div>
 
-            <div class="range-tabs detail-tab-panel" data-detail-panel="chart" role="tablist" aria-label="Zeitraum auswählen">
+            <div class="range-tabs detail-tab-panel active" data-detail-panel="chart" role="tablist" aria-label="Zeitraum auswählen">
               <button class="range-button active" type="button" data-range="1d">1T</button>
               <button class="range-button" type="button" data-range="1w">1W</button>
               <button class="range-button" type="button" data-range="1m">1M</button>
@@ -420,7 +409,7 @@
               <button class="range-button" type="button" data-range="5y">5J</button>
               <button class="range-button" type="button" data-range="max">Max</button>
             </div>
-            <div class="chart-controls detail-tab-panel" data-detail-panel="chart">
+            <div class="chart-controls detail-tab-panel active" data-detail-panel="chart">
               <div class="chart-segment" aria-label="Chart-Typ">
                 <button class="active" type="button" data-chart-type="line">Linie</button>
                 <button type="button" data-chart-type="area">Fläche</button>
@@ -434,32 +423,34 @@
               <button type="button" id="expandChart">Chart vergrößern</button>
             </div>
 
-            <div class="chart-shell detail-tab-panel" data-detail-panel="chart">
+            <div class="chart-indicator-note detail-tab-panel active" id="chartIndicatorNote" data-detail-panel="chart" hidden></div>
+
+            <div class="chart-shell detail-tab-panel active" data-detail-panel="chart">
               <canvas id="priceChart" width="980" height="360" aria-label="Historischer Kurschart"></canvas>
               <div class="chart-tooltip" id="chartTooltip" hidden></div>
               <div class="chart-loading" id="chartLoading">Chartdaten werden geladen</div>
             </div>
 
-            <div class="metric-grid detail-tab-panel active" data-detail-panel="overview">
+            <div class="metric-grid detail-tab-panel" data-detail-panel="overview">
               <article>
                 <span>Data Health</span>
-                <strong id="metricHealth">Wird geprüft</strong>
+                <strong id="metricHealth">Demo-Modus</strong>
               </article>
               <article>
                 <span>Zeitraum</span>
-                <strong id="metricPeriodChange">Wird geladen</strong>
+                <strong id="metricPeriodChange">Heute</strong>
               </article>
               <article>
                 <span>Hoch / Tief</span>
-                <strong id="metricHighLow">Wird geladen</strong>
+                <strong id="metricHighLow">Letzter Stand</strong>
               </article>
               <article>
                 <span>Letztes Update</span>
-                <strong id="metricUpdated">Wird geprüft</strong>
+                <strong id="metricUpdated">Aktualisiert</strong>
               </article>
               <article>
                 <span>Quelle</span>
-                <strong id="metricSource">Wird geprüft</strong>
+                <strong id="metricSource">Demo-Modus</strong>
               </article>
               <article>
                 <span>Region</span>
@@ -475,21 +466,21 @@
               </article>
             </div>
 
-            <div class="detail-extra-grid detail-tab-panel active" data-detail-panel="overview">
+            <div class="detail-extra-grid detail-tab-panel" data-detail-panel="overview">
               <article>
                 <span class="panel-label">Kennzahlen</span>
                 <p id="assetMetrics">Kennzahlen werden nach Asset-Typ geladen.</p>
               </article>
               <article>
                 <span class="panel-label">Chart-Marker</span>
-                <p id="assetMarkers">News, Earnings, erhöhte Volatilität und mögliche Trendwechsel werden als Demo-Marker angezeigt.</p>
+                <p id="assetMarkers">News, Earnings, erhöhte Volatilität und mögliche Trendwechsel erscheinen als Event-Marker.</p>
               </article>
             </div>
 
             <div class="ai-asset-grid detail-tab-panel" data-detail-panel="ai">
               <article>
                 <span class="panel-label">AI Summary</span>
-                <p id="assetAiSummary">Die Markteinordnung wird vorbereitet.</p>
+                <p id="assetAiSummary">Kurzfazit, mögliche Treiber und Risiko-Hinweise erscheinen nach Asset-Auswahl.</p>
               </article>
               <article>
                 <span class="panel-label">Mögliche Chance</span>
@@ -520,18 +511,18 @@
               </article>
               <article>
                 <span class="panel-label">Datenqualität</span>
-                <p id="assetDataQuality">Quelle, Aktualität und Demo-Fallback werden geprüft.</p>
+                <p id="assetDataQuality">Quelle, Aktualität und Fallback-Status werden als Datenqualität eingeordnet.</p>
               </article>
             </div>
 
             <div class="detail-extra-grid detail-tab-panel" data-detail-panel="news">
               <article>
                 <span class="panel-label">News Intelligence</span>
-                <p id="assetNewsDeep">News zu diesem Asset werden hier als Demo-Relevanz angezeigt.</p>
+                <p id="assetNewsDeep">News zu diesem Asset werden nach Relevanz und Watchlist-Bezug eingeordnet.</p>
               </article>
               <article>
                 <span class="panel-label">Möglicher Impact</span>
-                <p id="assetNewsImpact">Impact wird nach Assetklasse simuliert.</p>
+                <p id="assetNewsImpact">Impact wird nach Assetklasse, Bewegung und Watchlist-Kontext bewertet.</p>
               </article>
             </div>
 
@@ -576,7 +567,7 @@
                 <span class="panel-label">Asset-Universum</span>
                 <h3 id="assetCount">Assets werden geladen</h3>
               </div>
-              <span class="live-badge" id="liveBadge">Datenstatus wird geprüft</span>
+              <span class="live-badge" id="liveBadge">Daten werden aktualisiert</span>
             </div>
             <div class="view-switcher" id="screener" aria-label="Screener-Ansicht">
               <button class="active" type="button" data-view-mode="cards">Cards</button>
@@ -623,7 +614,7 @@
         <div class="section-heading">
           <p class="eyebrow">News Intelligence</p>
           <h2>Kuratiert nach Relevanz, nicht nach Lautstärke</h2>
-          <p>News-Cards zeigen Quelle, Zeit, betroffene Assets, AI-Zusammenfassung und mögliche Marktrelevanz. In der Produktversion wird hier eine lizenzierte News-API angebunden.</p>
+          <p>News werden nach Relevanz, betroffenen Assets, Sektoren und möglichem Watchlist-Impact eingeordnet. Keine Anlageberatung.</p>
         </div>
         <div class="news-filters" id="newsFilters" aria-label="News-Filter">
           <button type="button" class="active" data-news-filter="all">Alle News</button>
@@ -662,7 +653,7 @@
         <div class="section-heading">
           <p class="eyebrow">Persönliche Watchlist</p>
           <h2>Dein tägliches Briefing beginnt mit den Werten, die dich interessieren</h2>
-          <p>Speichere Werte lokal in dieser Demo. Später können Preisalarme, Watchlist-News, Portfolio-Analyse und ein persönliches Daily Briefing ergänzt werden.</p>
+          <p>Speichere Werte lokal in deinem Browser. Preisalarme, Watchlist-News, Portfolio-Kontext und Daily Briefing bleiben persönlich nachvollziehbar.</p>
         </div>
         <div class="watchlist-groups" id="watchlistGroups" aria-label="Watchlist-Gruppen">
           <button class="active" type="button" data-group="Alle">Alle</button>
@@ -672,7 +663,16 @@
           <button type="button" data-group="Tech">Tech</button>
           <button type="button" data-group="Beobachten">Beobachten</button>
         </div>
-        <div class="watchlist-summary" id="watchlistBriefing">Noch keine persönliche Watchlist. Füge in „Märkte“ einen Wert hinzu.</div>
+        <div class="watchlist-summary" id="watchlistBriefing">Füge deine ersten 3 Werte hinzu, um dein persönliches Briefing zu starten.</div>
+        <div class="watchlist-starter" id="watchlistStarter" aria-label="Watchlist Schnellstart">
+          <span class="panel-label">Schnellstart</span>
+          <button type="button" data-suggest-watchlist="BTC">Bitcoin</button>
+          <button type="button" data-suggest-watchlist="NVDA">Nvidia</button>
+          <button type="button" data-suggest-watchlist="EUNL.DE">MSCI World ETF</button>
+          <button type="button" data-suggest-watchlist="VOO">S&P 500 ETF</button>
+          <button type="button" data-suggest-watchlist="AAPL">Apple</button>
+          <button type="button" data-suggest-watchlist="ETH">Ethereum</button>
+        </div>
         <div class="watchlist-stats" id="watchlistStats"></div>
         <div class="watchlist-grid" id="savedWatchlist"></div>
       </section>
@@ -680,12 +680,12 @@
       <section class="alerts-section" id="alerts">
         <div class="section-heading">
           <p class="eyebrow">Alerts Center</p>
-          <h2>Demo-Alarme für Preis, Bewegung, News und Risiko</h2>
-          <p>Erstelle lokale Alarme mit Bedingung und Zielwert. In der Produktversion würden sie serverseitig überwacht.</p>
+          <h2>Alarme für Preis, Bewegung, News und Risiko</h2>
+          <p>Erstelle Preisalarme und Pro-Signale für Bewegung, News Impact, Risiko und Watchlist-Veränderungen.</p>
         </div>
         <div class="alerts-toolbar">
           <button class="primary-action" id="createGlobalAlert" type="button">Alarm erstellen</button>
-          <button class="secondary-action" id="clearAlerts" type="button">Alle Demo-Alarme löschen</button>
+          <button class="secondary-action" id="clearAlerts" type="button">Alle Alarme löschen</button>
         </div>
         <div class="alerts-list" id="alertsList"></div>
       </section>
@@ -696,7 +696,7 @@
           <h2>Assets nebeneinander vergleichen</h2>
           <p>Vergleiche zwei bis vier Werte nach Performance, Risiko, AI-Sentiment, Datenstatus und typabhängigen Kennzahlen.</p>
         </div>
-        <div class="compare-summary" id="compareSummary">Noch keine Assets im Vergleich. Nutze „Vergleichen“ in der Market-Matrix.</div>
+        <div class="compare-summary" id="compareSummary">Wähle zwei Assets in der Market-Matrix, um Risiko, Momentum, Datenqualität und News Impact zu vergleichen.</div>
         <div class="compare-grid" id="compareGrid"></div>
       </section>
 
@@ -720,7 +720,8 @@
             </div>
           </div>
           <div class="access-actions">
-            <button class="primary-action" id="openAccessModal" type="button">Nexus Code einlösen</button>
+            <button class="primary-action" id="openCheckout" type="button">Pro kaufen</button>
+            <button class="secondary-action" id="openAccessModal" type="button">Code einlösen</button>
             <button class="secondary-action" id="resetDemoAccess" type="button">Demo-Zugang zurücksetzen</button>
           </div>
         </div>
@@ -732,7 +733,7 @@
                 <span class="panel-label">Market Radar</span>
                 <h3>Risiko, Momentum und Relevanz auf einen Blick</h3>
               </div>
-              <span class="pro-badge">Live Demo</span>
+              <span class="pro-badge">Live Preview</span>
             </div>
             <div class="radar-tabs" id="radarTabs">
               <button class="active" type="button" data-radar-filter="Alle">Alle</button>
@@ -811,6 +812,10 @@
                 <option value="crypto">Krypto nähert sich ATH/Support-Zone</option>
               </select>
             </label>
+            <div class="smart-alert-form">
+              <label class="field"><span>Asset</span><input id="smartAlertAsset" type="text" placeholder="Aktiver Fokus" /></label>
+              <label class="field"><span>Bedingung</span><input id="smartAlertCondition" type="text" placeholder="z. B. Bewegung über 3 %" /></label>
+            </div>
             <button class="primary-action" id="createSmartAlert" type="button">Smart Alert speichern</button>
             <div class="smart-alerts" id="smartAlertsList"></div>
           </article>
@@ -909,7 +914,7 @@
           </div>
           <div class="pro-output" id="proDashboardOutput">
             <span class="panel-label">Live Preview</span>
-            <p>Wähle ein Pro-Modul. Free zeigt eine Vorschau, Pro führt die Demo-Aktion direkt aus.</p>
+            <p>Wähle ein Pro-Modul. Free zeigt eine Vorschau, Pro führt die Aktion direkt im Cockpit aus.</p>
           </div>
         </section>
         <div class="pro-compare-table" aria-label="Free Pro Vergleich">
@@ -927,7 +932,7 @@
               <tr><td>Smart Alerts</td><td>Einfache Preisalarme</td><td>Volatilität, News Impact, Trendabweichung, Risikoänderung</td></tr>
               <tr><td>News Impact</td><td>Titel und Kurzfassung</td><td>Impact Score, betroffene Assets, Watchlist-Bezug, Chancen/Risiken</td></tr>
               <tr><td>Deep Asset Analysis</td><td>Kurzvorschau</td><td>Aktien-, ETF- und Krypto-spezifische Analyse mit Confidence Score</td></tr>
-              <tr><td>Reports</td><td>Nicht verfügbar</td><td>Report vorbereiten, Export-Demo, Verlauf und Datenqualität</td></tr>
+              <tr><td>Reports</td><td>Nicht verfügbar</td><td>Report vorbereiten, Export-Preview, Verlauf und Datenqualität</td></tr>
             </tbody>
           </table>
         </div>
@@ -936,40 +941,42 @@
       <section class="pricing-section" id="pricing">
         <div class="section-heading">
           <p class="eyebrow">Preise</p>
-          <h2>Professionell vorbereitet für ein Subscription-Modell</h2>
-          <p>Die Seite verkauft noch nicht übertrieben, zeigt aber klar, wie Free und Pro später monetarisiert werden können.</p>
+          <h2>Starte kostenlos. Werde Pro, wenn du tiefer analysieren willst.</h2>
+          <p>Free gibt dir den Einstieg. Pro schaltet AI Assistant, Watchlist Intelligence, Smart Alerts und tiefere Analysen frei.</p>
         </div>
         <div class="pricing-grid">
           <article>
             <span class="plan-name">Free</span>
             <strong>0 €</strong>
-            <p>Basis-Briefing, begrenzte Watchlist, grundlegende AI-Zusammenfassungen, verzögerte Daten und klare Risikohinweise.</p>
+            <p>Für den Einstieg und erste Marktüberblicke.</p>
             <ul class="plan-features">
               <li>3 AI-Fragen pro Tag</li>
               <li>Basis-Screener und Watchlist</li>
-              <li>Demo-/Live-Datenstatus</li>
+              <li>Live-/Cache-Datenstatus</li>
             </ul>
-            <button class="secondary-action plan-button" type="button" data-plan="Free">Free starten</button>
+            <button class="secondary-action plan-button" type="button" data-plan="Free">Kostenlos starten</button>
           </article>
           <article class="featured-plan">
-            <span class="plan-name">Pro</span>
-            <strong>12,99 €</strong>
-            <p><b>Für Nutzer, die ihre Watchlist täglich verstehen wollen.</b> Spart Zeit durch AI-Analysen, Watchlist-Briefings und intelligente Markt-Signale.</p>
+            <span class="plan-name" id="proPlanBadge">PRO</span>
+            <strong id="proPriceLabel">12,99 €</strong>
+            <p><b>Für Nutzer, die ihre Watchlist täglich verstehen wollen.</b></p>
+            <p>Spart Zeit durch AI-Analysen, Watchlist-Briefings und intelligente Markt-Signale.</p>
             <ul class="plan-features">
               <li>Unbegrenzter AI Assistant</li>
               <li>Watchlist Pulse und Smart Alerts</li>
-              <li>News Impact, Compare Battle, Confidence Score</li>
+              <li>News Impact für deine Watchlist</li>
               <li>Deep Asset Analysis für Aktien, ETFs und Krypto</li>
-              <li>AI Briefing Generator mit Timestamp</li>
-              <li>Reports & Export-Demo</li>
-              <li>Mehr Historie und Datenqualitäts-Kontext</li>
+              <li>AI Briefing Generator</li>
+              <li>Reports & Export-Preview</li>
             </ul>
-            <button class="primary-action plan-button" type="button" data-plan="Pro" id="proPlanButton">Nexus Code einlösen</button>
+            <p class="pro-active-note" id="proPlanStatusNote" hidden>Dein Pro-Zugang ist aktiv.</p>
+            <button class="primary-action plan-button" type="button" data-plan="Pro" id="proPlanButton">Pro kaufen</button>
+            <button class="link-action" type="button" id="pricingAccessCode">Ich habe einen Nexus Code</button>
           </article>
           <article>
             <span class="plan-name">Business</span>
             <strong>Individuell</strong>
-            <p>Team-Dashboards, API-Zugang, Reports, Rollenrechte, Compliance-Export und dedizierte Datenpakete für professionelle Workflows.</p>
+            <p>Für Teams, Reports, API-Zugriff und professionelle Workflows.</p>
             <ul class="plan-features">
               <li>Team-Workflows und Rollen</li>
               <li>API, Reports und Adminbereich</li>
@@ -991,9 +998,9 @@
             <tbody>
               <tr><td>Watchlist</td><td>Begrenzt</td><td>Unbegrenzt</td><td>Teams</td></tr>
               <tr><td>AI Briefings</td><td>Basis</td><td>Erweitert</td><td>Reports</td></tr>
-              <tr><td>Alerts</td><td>Demo</td><td>Preis, News, Risiko</td><td>Workflows</td></tr>
+              <tr><td>Alerts</td><td>Preis</td><td>Preis, News, Risiko</td><td>Workflows</td></tr>
               <tr><td>Compare</td><td>2 Assets</td><td>4 Assets</td><td>Portfolio-Views</td></tr>
-              <tr><td>Daten</td><td>Verzögert/Demo</td><td>Mehr Historie</td><td>API & Lizenzen</td></tr>
+              <tr><td>Daten</td><td>Live/Cache</td><td>Mehr Historie</td><td>API & Lizenzen</td></tr>
             </tbody>
           </table>
         </div>
@@ -1005,6 +1012,10 @@
           <h2>Transparenz ist ein Produktfeature</h2>
         </div>
         <div class="legal-grid">
+          <article>
+            <h3>Wie MarketPilot einordnet</h3>
+            <p>Kursbewegung, Risiko-Level, Asset-Typ, News Impact, Watchlist-Kontext und Datenqualität werden zu einem verständlichen Kurzfazit verbunden.</p>
+          </article>
           <article>
             <h3>Keine Anlageberatung</h3>
             <p>Alle Inhalte dienen ausschließlich der Information und Markteinordnung. Es werden keine persönlichen Kauf- oder Verkaufsempfehlungen gegeben.</p>
@@ -1117,6 +1128,47 @@
       </section>
     </div>
 
+    <div class="modal-backdrop checkout-backdrop" id="checkoutModal" hidden>
+      <section class="modal checkout-modal" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
+        <button class="modal-close" id="checkoutClose" type="button" aria-label="Checkout schließen">×</button>
+        <div class="security-header">
+          <span class="security-icon" aria-hidden="true">Pro</span>
+          <div>
+            <span class="panel-label">MarketPilot Nexus Pro</span>
+            <h2 id="checkoutTitle">Pro starten</h2>
+          </div>
+        </div>
+        <p class="checkout-copy">AI Assistant, Watchlist Pulse, Smart Alerts, News Impact und Deep Asset Analysis für dein tägliches Marktbriefing.</p>
+        <div class="billing-toggle" id="billingToggle" role="tablist" aria-label="Abrechnung wählen">
+          <button class="active" type="button" data-plan-cycle="monthly">Monatlich</button>
+          <button type="button" data-plan-cycle="yearly">Jährlich <span>2 Monate sparen</span></button>
+        </div>
+        <div class="checkout-summary">
+          <div>
+            <span class="panel-label">Dein Plan</span>
+            <p>MarketPilot Nexus Pro</p>
+            <strong id="checkoutPrice">12,99 € monatlich</strong>
+            <p id="checkoutSubline">Monatlich kündbar. Demo-Kauf aktiviert Pro lokal.</p>
+          </div>
+          <ul>
+            <li>Unbegrenzter AI Assistant</li>
+            <li>Watchlist Intelligence und Smart Alerts</li>
+            <li>News Impact für deine Watchlist</li>
+            <li>Deep Asset Analysis und Reports</li>
+          </ul>
+        </div>
+        <div class="checkout-payment">
+          <span class="panel-label">Zahlung</span>
+          <p>Demo-Zahlungsbereich. Eine echte Integration kann später über Stripe oder Paddle angebunden werden.</p>
+        </div>
+        <p class="form-message" id="checkoutMessage"></p>
+        <div class="detail-actions">
+          <button class="primary-action" id="completeCheckout" type="button">Demo-Kauf abschließen</button>
+          <button class="link-action" id="checkoutAccessCode" type="button">Ich habe einen Nexus Code</button>
+        </div>
+      </section>
+    </div>
+
     <aside class="drawer" id="dataDrawer" hidden aria-label="Datenquellen">
       <button class="modal-close" id="drawerClose" type="button" aria-label="Datenquellen schließen">×</button>
       <span class="panel-label">Datenquellen</span>
@@ -1125,7 +1177,7 @@
       <div class="legal-grid">
         <article><h3>Live</h3><p>Quelle antwortet aktuell.</p></article>
         <article><h3>Verzögert</h3><p>Datenquelle liefert verzögert oder nicht börsennah.</p></article>
-        <article><h3>Demo</h3><p>API nicht erreichbar, realistische Demo-Daten werden angezeigt.</p></article>
+        <article><h3>Fallback</h3><p>Wenn eine Quelle nicht erreichbar ist, wird ein plausibler letzter Stand als Fallback gekennzeichnet.</p></article>
       </div>
     </aside>
 

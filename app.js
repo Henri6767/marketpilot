@@ -144,6 +144,7 @@ const selectors = {
   dataDrawer: document.querySelector("#dataDrawer"),
   drawerClose: document.querySelector("#drawerClose"),
   accessCodeButton: document.querySelector("#accessCodeButton"),
+  openCheckout: document.querySelector("#openCheckout"),
   openAccessModal: document.querySelector("#openAccessModal"),
   accessModal: document.querySelector("#accessModal"),
   accessClose: document.querySelector("#accessClose"),
@@ -152,6 +153,18 @@ const selectors = {
   toggleAccessCode: document.querySelector("#toggleAccessCode"),
   accessCodeMessage: document.querySelector("#accessCodeMessage"),
   redeemAccessCode: document.querySelector("#redeemAccessCode"),
+  checkoutModal: document.querySelector("#checkoutModal"),
+  checkoutClose: document.querySelector("#checkoutClose"),
+  checkoutPrice: document.querySelector("#checkoutPrice"),
+  checkoutSubline: document.querySelector("#checkoutSubline"),
+  checkoutMessage: document.querySelector("#checkoutMessage"),
+  completeCheckout: document.querySelector("#completeCheckout"),
+  checkoutAccessCode: document.querySelector("#checkoutAccessCode"),
+  billingToggle: document.querySelector("#billingToggle"),
+  pricingAccessCode: document.querySelector("#pricingAccessCode"),
+  proPlanBadge: document.querySelector("#proPlanBadge"),
+  proPlanStatusNote: document.querySelector("#proPlanStatusNote"),
+  proPriceLabel: document.querySelector("#proPriceLabel"),
   resetDemoAccess: document.querySelector("#resetDemoAccess"),
   resetDemoAccessLegal: document.querySelector("#resetDemoAccessLegal"),
   premiumGrid: document.querySelector(".premium-grid"),
@@ -180,6 +193,8 @@ const selectors = {
   newsImpactScanner: document.querySelector("#newsImpactScanner"),
   compareBattle: document.querySelector("#compareBattle"),
   smartAlertType: document.querySelector("#smartAlertType"),
+  smartAlertAsset: document.querySelector("#smartAlertAsset"),
+  smartAlertCondition: document.querySelector("#smartAlertCondition"),
   createSmartAlert: document.querySelector("#createSmartAlert"),
   smartAlertsList: document.querySelector("#smartAlertsList"),
   briefingScope: document.querySelector("#briefingScope"),
@@ -210,18 +225,21 @@ const state = {
   viewMode: "cards",
   chartType: "line",
   activeIndicators: new Set(),
-  activeDetailTab: "overview",
+  activeDetailTab: "chart",
   modalMode: null,
   modalSymbol: null,
   lastViewed: JSON.parse(localStorage.getItem("marketpilot-last-viewed") || "[]"),
   lastVisit: localStorage.getItem("marketpilot-last-visit") || null,
   renderQueued: false,
   hydrationQueued: false,
-  isProUser: localStorage.getItem("marketpilot-pro") === "true",
+  isProUser: localStorage.getItem("marketpilot-pro") === "true" || localStorage.getItem("isProUser") === "true",
   assistantMessages: JSON.parse(localStorage.getItem("marketpilot-assistant") || "[]"),
   assistantDaily: JSON.parse(localStorage.getItem("marketpilot-assistant-daily") || "{}"),
   marketRadarFilter: "Alle",
-  smartAlerts: JSON.parse(localStorage.getItem("marketpilot-smart-alerts") || "[]")
+  smartAlerts: JSON.parse(localStorage.getItem("marketpilot-smart-alerts") || "[]"),
+  proAccessMethod: localStorage.getItem("marketpilot-pro-method") || localStorage.getItem("proAccessMethod") || "",
+  checkoutPlan: localStorage.getItem("selectedBillingCycle") || localStorage.getItem("marketpilot-billing-cycle") || localStorage.getItem("marketpilot-checkout-plan") || "monthly",
+  checkoutLoading: false
 };
 
 localStorage.setItem("marketpilot-last-visit", new Date().toISOString());
@@ -262,19 +280,32 @@ function bootInterfaceEffects() {
   });
 }
 
-function formatPrice(value, currency = "EUR") {
+function formatCurrency(value, currency = "EUR") {
   if (!Number.isFinite(value)) return "Live-Daten nicht verfügbar";
-  const digits = value >= 100 ? 2 : value >= 1 ? 3 : 6;
+  const digits = Math.abs(value) >= 1 ? 2 : 6;
   return new Intl.NumberFormat("de-DE", {
     style: "currency",
     currency,
+    minimumFractionDigits: Math.min(2, digits),
     maximumFractionDigits: digits
-  }).format(value);
+  }).format(value).replace(/\u00a0/g, " ");
+}
+
+function formatPrice(value, currency = "EUR") {
+  return formatCurrency(value, currency);
 }
 
 function formatPercent(value) {
   if (!Number.isFinite(value)) return "Nicht verfügbar";
-  return `${value >= 0 ? "+" : ""}${value.toFixed(2).replace(".", ",")}%`;
+  return `${value >= 0 ? "+" : ""}${value.toFixed(2).replace(".", ",")} %`;
+}
+
+function formatCompactNumber(value) {
+  if (!Number.isFinite(value)) return "Nicht verfügbar";
+  return new Intl.NumberFormat("de-DE", {
+    notation: "compact",
+    maximumFractionDigits: 1
+  }).format(value).replace(/\u00a0/g, " ");
 }
 
 function trendClass(value) {
@@ -286,10 +317,10 @@ function healthLabel(status) {
   return {
     live: "Live",
     delayed: "Verzögert",
-    demo: "Demo",
+    demo: "Fallback",
     cache: "Cache",
     failed: "Fehlgeschlagen",
-    loading: "Wird geladen"
+    loading: "Aktualisiert"
   }[status || "loading"];
 }
 
@@ -374,6 +405,22 @@ function saveLastViewed() {
 
 function saveProState() {
   localStorage.setItem("marketpilot-pro", String(state.isProUser));
+  localStorage.setItem("marketpilot-pro-method", state.proAccessMethod || "");
+  localStorage.setItem("marketpilot-billing-cycle", state.checkoutPlan || "monthly");
+  localStorage.setItem("marketpilot-checkout-plan", state.checkoutPlan || "monthly");
+  localStorage.setItem("isProUser", String(state.isProUser));
+  localStorage.setItem("proAccessMethod", state.proAccessMethod || "");
+  localStorage.setItem("selectedBillingCycle", state.checkoutPlan || "monthly");
+}
+
+function activatePro(method) {
+  state.isProUser = true;
+  state.proAccessMethod = method;
+  saveProState();
+  updateProUI();
+  renderPremiumModules();
+  document.body.classList.add("pro-just-activated");
+  window.setTimeout(() => document.body.classList.remove("pro-just-activated"), 1600);
 }
 
 function saveAssistant() {
@@ -409,15 +456,24 @@ function requirePro(feature, benefit) {
 function updateProUI() {
   document.body.classList.toggle("is-pro", state.isProUser);
   document.body.classList.toggle("is-free", !state.isProUser);
+  const methodLabel = state.proAccessMethod === "code" ? "Aktiviert per Nexus Code." : state.proAccessMethod === "purchase" ? "Aktiviert per Demo-Kauf." : "";
   document.querySelector("#proStatusLabel").textContent = state.isProUser ? "Pro aktiv" : "Free";
   document.querySelector("#proStatusText").textContent = state.isProUser
     ? "Alle Demo-Pro-Funktionen sind freigeschaltet: Assistant, Smart Alerts, Briefings und Scanner."
     : "Free: 3 AI-Fragen pro Tag, Basis-Insights und sichtbare Pro-Vorschau.";
   selectors.accessCodeButton.textContent = state.isProUser ? "Pro aktiv" : "Nexus Code";
-  if (selectors.navProStatus) selectors.navProStatus.textContent = state.isProUser ? "Pro Active" : "Free";
-  selectors.openAccessModal.textContent = state.isProUser ? "Pro aktiv" : "Nexus Code einlösen";
+  if (selectors.navProStatus) selectors.navProStatus.textContent = state.isProUser ? "Pro aktiv" : "Free";
+  selectors.openAccessModal.textContent = state.isProUser ? "Code verwalten" : "Code einlösen";
+  if (selectors.openCheckout) selectors.openCheckout.textContent = state.isProUser ? "Pro Dashboard öffnen" : "Pro kaufen";
   selectors.openAccessModal.setAttribute("aria-pressed", String(state.isProUser));
-  if (selectors.proPlanButton) selectors.proPlanButton.textContent = state.isProUser ? "Pro Dashboard öffnen" : "Nexus Code einlösen";
+  if (selectors.proPlanButton) selectors.proPlanButton.textContent = state.isProUser ? "Pro Dashboard öffnen" : "Pro kaufen";
+  if (selectors.proPlanBadge) selectors.proPlanBadge.textContent = state.isProUser ? "PRO AKTIV" : "PRO";
+  if (selectors.proPlanStatusNote) {
+    selectors.proPlanStatusNote.hidden = !state.isProUser;
+    selectors.proPlanStatusNote.textContent = state.isProUser ? `Dein Pro-Zugang ist aktiv. ${methodLabel}`.trim() : "";
+  }
+  if (selectors.pricingAccessCode) selectors.pricingAccessCode.hidden = state.isProUser;
+  if (selectors.proPriceLabel) selectors.proPriceLabel.textContent = state.checkoutPlan === "yearly" ? "119,99 €" : "12,99 €";
   selectors.resetDemoAccess.hidden = !state.isProUser;
   selectors.resetDemoAccessLegal.hidden = !state.isProUser;
   selectors.assistantQuota.textContent = remainingAssistantQuestions();
@@ -434,6 +490,50 @@ function updateProUI() {
   document.querySelectorAll("[data-pro-copy]").forEach((item) => {
     item.textContent = state.isProUser ? "Pro aktiv" : item.dataset.proCopy || "Pro";
   });
+}
+
+function checkoutPriceCopy() {
+  if (state.checkoutPlan === "yearly") {
+    return {
+      price: "119,99 € pro Jahr",
+      subline: "Jährlich zahlen und 2 Monate sparen. Demo-Kauf aktiviert Pro lokal."
+    };
+  }
+  return {
+    price: "12,99 € monatlich",
+    subline: "Monatlich kündbar. Demo-Kauf aktiviert Pro lokal."
+  };
+}
+
+function updateCheckoutUI() {
+  const copy = checkoutPriceCopy();
+  selectors.checkoutPrice.textContent = copy.price;
+  selectors.checkoutSubline.textContent = copy.subline;
+  selectors.billingToggle?.querySelectorAll("[data-plan-cycle]").forEach((button) => {
+    const active = button.dataset.planCycle === state.checkoutPlan;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  if (selectors.proPriceLabel) selectors.proPriceLabel.textContent = state.checkoutPlan === "yearly" ? "119,99 €" : "12,99 €";
+}
+
+function startCheckout(plan = state.checkoutPlan) {
+  state.checkoutPlan = plan;
+  localStorage.setItem("selectedBillingCycle", state.checkoutPlan);
+  localStorage.setItem("marketpilot-billing-cycle", state.checkoutPlan);
+  localStorage.setItem("marketpilot-checkout-plan", state.checkoutPlan);
+  selectors.checkoutModal.hidden = false;
+  selectors.checkoutMessage.textContent = "";
+  selectors.completeCheckout.disabled = false;
+  selectors.completeCheckout.textContent = state.isProUser ? "Zum Pro Dashboard" : "Demo-Kauf abschließen";
+  updateCheckoutUI();
+}
+
+const openCheckout = startCheckout;
+
+function closeCheckout() {
+  selectors.checkoutModal.hidden = true;
+  state.checkoutLoading = false;
 }
 
 function assetSector(asset) {
@@ -456,9 +556,9 @@ function mockFundamentals(asset) {
     return `TER ${(0.05 + (asset.rank % 12) / 100).toFixed(2)}% · Anbieter ${asset.symbol.includes(".DE") ? "iShares/Xtrackers" : "Vanguard/iShares"} · Index ${asset.name.includes("S&P") ? "S&P 500" : asset.name.includes("World") ? "MSCI/FTSE World" : "Breiter Markt"} · Replikation physisch · Top Holdings: Apple, Microsoft, Nvidia.`;
   }
   if (asset.type === "Krypto") {
-    return `Market Cap Demo ${(asset.rank * 12.4).toFixed(1)} Mrd. € · 24h Volume ${(asset.rank * 0.8).toFixed(1)} Mrd. € · Volatilität erhöht · Abstand zum ATH ${(20 + asset.rank).toFixed(0)}%.`;
+    return `Market Cap ${(asset.rank * 12.4).toFixed(1)} Mrd. € · 24h Volume ${(asset.rank * 0.8).toFixed(1)} Mrd. € · Volatilität erhöht · Abstand zum ATH ${(20 + asset.rank).toFixed(0)}%.`;
   }
-  return `Marktkapitalisierung Demo ${(asset.rank * 38).toFixed(0)} Mrd. $ · KGV ${(18 + asset.rank % 22).toFixed(1)} · Dividendenrendite ${asset.rank % 3 === 0 ? "1,4%" : "0,0%"} · Börse ${asset.symbol.includes(".DE") ? "Xetra" : "Nasdaq/NYSE"} · Sektor ${assetSector(asset)}.`;
+  return `Marktkapitalisierung ${(asset.rank * 38).toFixed(0)} Mrd. $ · KGV ${(18 + asset.rank % 22).toFixed(1)} · Dividendenrendite ${asset.rank % 3 === 0 ? "1,4%" : "0,0%"} · Börse ${asset.symbol.includes(".DE") ? "Xetra" : "Nasdaq/NYSE"} · Sektor ${assetSector(asset)}.`;
 }
 
 function basePriceForAsset(asset) {
@@ -627,7 +727,7 @@ function demoChart(asset, range = "1d", endPrice = basePriceForAsset(asset)) {
     changePct: previous ? ((price - previous) / previous) * 100 : 0,
     currency: currencyForAsset(asset),
     updated: new Date(),
-    source: "Demo-Daten",
+    source: "Fallback-Daten",
     health: "demo",
     series
   };
@@ -879,7 +979,7 @@ function renderScreenerTable(rows) {
         <td>${asset.type}</td>
         <td>${asset.region}</td>
         <td>${assetSector(asset)}</td>
-        <td>${quote ? formatPrice(quote.price, quote.currency) : "Daten werden geladen"}</td>
+        <td>${quote ? formatPrice(quote.price, quote.currency) : "Letzter Stand"}</td>
         <td class="${trendClass(quote?.changePct)}">${formatPercent(quote?.changePct)}</td>
         <td class="${trendClass(change7d)}">${formatPercent(change7d)}</td>
         <td class="${trendClass(change1m)}">${formatPercent(change1m)}</td>
@@ -888,7 +988,7 @@ function renderScreenerTable(rows) {
         <td>${healthLabel(health)}</td>
         <td>
           <div class="table-actions">
-            <button type="button" data-table-action="details" data-symbol="${asset.symbol}">Details</button>
+            <button type="button" data-table-action="details" data-symbol="${asset.symbol}">Chart öffnen</button>
             <button type="button" data-table-action="watchlist" data-symbol="${asset.symbol}">${saved ? "In Watchlist" : "Watchlist"}</button>
             <button type="button" data-table-action="compare" data-symbol="${asset.symbol}">${compared ? "Im Vergleich" : "Vergleichen"}</button>
             <button type="button" data-table-action="alert" data-symbol="${asset.symbol}">Alarm</button>
@@ -950,7 +1050,7 @@ function renderAssetCard(asset) {
         </div>
         <span class="type-pill ${typeClass(asset)}">${asset.type}</span>
       </div>
-      <div class="asset-price">${quote ? formatPrice(quote.price, quote.currency) : "Daten werden geladen"}</div>
+      <div class="asset-price">${quote ? formatPrice(quote.price, quote.currency) : "Letzter Stand"}</div>
       ${sparkline(chart?.series, quote?.changePct)}
       <div class="asset-stats">
         <span>24h <b class="${trendClass(quote?.changePct)}">${formatPercent(quote?.changePct)}</b></span>
@@ -959,13 +1059,13 @@ function renderAssetCard(asset) {
       </div>
       <div class="asset-meta">
         <span class="health-badge health-${health}">${healthLabel(health)}</span>
-        <span class="source-badge">${quote?.source || "Quelle wird geprüft"}</span>
+        <span class="source-badge">${quote?.source || "Demo-Modus"}</span>
         <span class="source-badge">Risiko: ${asset.risk}</span>
         <span class="source-badge">Sektor: ${sector}</span>
         <span class="source-badge">AI: ${sentimentFromChange(quote?.changePct)}</span>
       </div>
       <div class="asset-card-actions">
-        <button class="primary-mini" type="button" data-action="details" data-symbol="${asset.symbol}">Details</button>
+        <button class="primary-mini" type="button" data-action="details" data-symbol="${asset.symbol}">Chart öffnen</button>
         <button type="button" data-action="watchlist" data-symbol="${asset.symbol}">${saved ? "In Watchlist" : "Zur Watchlist"}</button>
         <button type="button" data-action="compare" data-symbol="${asset.symbol}">${compared ? "Verglichen" : "Vergleichen"}</button>
         <button type="button" data-action="alert" data-symbol="${asset.symbol}">Alarm erstellen</button>
@@ -1004,28 +1104,92 @@ async function hydrateVisible(rows) {
   }
 }
 
+function drawHeroSparkline(canvas, series, color = "#61df91") {
+  const ctx = canvas.getContext("2d");
+  const rect = canvas.getBoundingClientRect();
+  const scale = window.devicePixelRatio || 1;
+  const width = rect.width || 520;
+  const height = rect.height || 140;
+  canvas.width = Math.max(1, Math.floor(width * scale));
+  canvas.height = Math.max(1, Math.floor(height * scale));
+  ctx.scale(scale, scale);
+  ctx.clearRect(0, 0, width, height);
+
+  const gradientBg = ctx.createLinearGradient(0, 0, width, height);
+  gradientBg.addColorStop(0, "rgba(53, 212, 208, 0.10)");
+  gradientBg.addColorStop(1, "rgba(93, 169, 255, 0.03)");
+  ctx.fillStyle = gradientBg;
+  ctx.fillRect(0, 0, width, height);
+
+  if (!series?.length || series.length < 2) return;
+
+  const cleanSeries = series.slice(-72).filter((point) => Number.isFinite(point.value));
+  if (cleanSeries.length < 2) return;
+  const values = cleanSeries.map((point) => point.value);
+  const rawMin = Math.min(...values);
+  const rawMax = Math.max(...values);
+  const rawSpread = rawMax - rawMin || Math.max(rawMax * 0.02, 1);
+  const min = rawMin - rawSpread * 0.12;
+  const max = rawMax + rawSpread * 0.12;
+  const padding = 12;
+  const xStep = (width - padding * 2) / Math.max(1, cleanSeries.length - 1);
+  const yFor = (value) => padding + (1 - (value - min) / (max - min || 1)) * (height - padding * 2);
+
+  ctx.beginPath();
+  cleanSeries.forEach((point, index) => {
+    const x = padding + index * xStep;
+    const y = yFor(point.value);
+    if (index === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.lineTo(width - padding, height - padding);
+  ctx.lineTo(padding, height - padding);
+  ctx.closePath();
+  const area = ctx.createLinearGradient(0, padding, 0, height - padding);
+  area.addColorStop(0, color === "#ff6b7d" ? "rgba(255, 107, 125, 0.22)" : "rgba(97, 223, 145, 0.22)");
+  area.addColorStop(1, "rgba(53, 212, 208, 0)");
+  ctx.fillStyle = area;
+  ctx.fill();
+
+  ctx.beginPath();
+  cleanSeries.forEach((point, index) => {
+    const x = padding + index * xStep;
+    const y = yFor(point.value);
+    if (index === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.8;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.stroke();
+}
+
 function drawChart(canvas, series, currency, color = "#61df91", options = {}) {
   const ctx = canvas.getContext("2d");
   const rect = canvas.getBoundingClientRect();
   const scale = window.devicePixelRatio || 1;
+  const isHeroChart = canvas === selectors.heroChart;
   const width = rect.width || (canvas === selectors.heroChart ? 360 : 920);
   const height = rect.height || (canvas === selectors.heroChart ? 210 : 360);
   canvas.width = Math.max(1, Math.floor(width * scale));
   canvas.height = Math.max(1, Math.floor(height * scale));
   ctx.scale(scale, scale);
   ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = "#081019";
+  ctx.fillStyle = isHeroChart ? "rgba(8,16,28,0.18)" : "#081019";
   ctx.fillRect(0, 0, width, height);
 
   if (!series?.length || series.length < 2) {
     ctx.fillStyle = "#99aabd";
     ctx.font = "800 15px system-ui";
     ctx.fillText("Live-Daten aktuell nicht verfügbar", 18, 38);
-    state.lastChart = { series: [], currency, plot: null };
+    if (!isHeroChart) state.lastChart = { series: [], currency, plot: null };
     return;
   }
 
-  const padding = { top: 28, right: 24, bottom: state.activeIndicators.has("volume") ? 72 : 36, left: 64 };
+  const padding = isHeroChart
+    ? { top: 16, right: 14, bottom: 18, left: 14 }
+    : { top: 28, right: 24, bottom: state.activeIndicators.has("volume") ? 72 : 36, left: 64 };
   const values = series.flatMap((point) => [point.high ?? point.value, point.low ?? point.value]).filter(Number.isFinite);
   const rawMin = Math.min(...values);
   const rawMax = Math.max(...values);
@@ -1037,9 +1201,9 @@ function drawChart(canvas, series, currency, color = "#61df91", options = {}) {
   const yFor = (value) => padding.top + (1 - (value - min) / spread) * (height - padding.top - padding.bottom);
   const xFor = (index) => padding.left + index * xStep;
 
-  ctx.strokeStyle = "rgba(153, 170, 189, 0.18)";
+  ctx.strokeStyle = isHeroChart ? "rgba(153, 170, 189, 0.08)" : "rgba(153, 170, 189, 0.18)";
   ctx.lineWidth = 1;
-  for (let i = 0; i < 4; i += 1) {
+  for (let i = 0; i < (isHeroChart ? 3 : 4); i += 1) {
     const y = padding.top + ((height - padding.top - padding.bottom) / 3) * i;
     ctx.beginPath();
     ctx.moveTo(padding.left, y);
@@ -1047,7 +1211,7 @@ function drawChart(canvas, series, currency, color = "#61df91", options = {}) {
     ctx.stroke();
   }
 
-  if (state.activeIndicators.has("volume")) {
+  if (!isHeroChart && state.activeIndicators.has("volume")) {
     const volumeTop = height - 58;
     const maxVolume = Math.max(...series.map((point) => point.volume || 0), 1);
     series.forEach((point, index) => {
@@ -1057,12 +1221,9 @@ function drawChart(canvas, series, currency, color = "#61df91", options = {}) {
       ctx.fillStyle = (point.close ?? point.value) >= (point.open ?? point.value) ? "rgba(97, 223, 145, 0.34)" : "rgba(255, 107, 125, 0.34)";
       ctx.fillRect(x - 1.5, volumeTop + 46 - barHeight, 3, barHeight);
     });
-    ctx.fillStyle = "rgba(153, 170, 189, 0.72)";
-    ctx.font = "800 11px system-ui";
-    ctx.fillText("Volumen", padding.left, height - 8);
   }
 
-  if (state.chartType === "candle") {
+  if (!isHeroChart && state.chartType === "candle") {
     const candleStep = Math.max(1, Math.ceil(series.length / 70));
     for (let index = candleStep; index < series.length; index += candleStep) {
       const prev = series[index - candleStep]?.value ?? series[index].value;
@@ -1082,7 +1243,7 @@ function drawChart(canvas, series, currency, color = "#61df91", options = {}) {
       ctx.fillRect(x - 3, Math.min(openY, closeY), 6, Math.max(2, Math.abs(closeY - openY)));
     }
   } else {
-    if (state.chartType === "area") {
+    if (!isHeroChart && state.chartType === "area") {
       const gradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
       gradient.addColorStop(0, color === "#61df91" ? "rgba(97, 223, 145, 0.24)" : "rgba(255, 107, 125, 0.24)");
       gradient.addColorStop(1, "rgba(53, 212, 208, 0)");
@@ -1107,7 +1268,7 @@ function drawChart(canvas, series, currency, color = "#61df91", options = {}) {
       else ctx.lineTo(x, y);
     });
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2.4;
+    ctx.lineWidth = isHeroChart ? 2.8 : 2.4;
     ctx.stroke();
   }
 
@@ -1130,31 +1291,13 @@ function drawChart(canvas, series, currency, color = "#61df91", options = {}) {
     ctx.setLineDash([]);
   }
 
-  if (state.activeIndicators.has("ma50")) {
+  if (!isHeroChart && state.activeIndicators.has("ma50")) {
     if (series.length >= 50) drawMovingAverage(50, "#f7cf72");
-    else {
-      ctx.fillStyle = "rgba(247, 207, 114, 0.9)";
-      ctx.font = "800 12px system-ui";
-      ctx.fillText("MA50 benötigt mindestens 50 Punkte", padding.left, padding.top + 18);
-    }
   }
-  if (state.activeIndicators.has("ma200")) {
+  if (!isHeroChart && state.activeIndicators.has("ma200")) {
     if (series.length >= 200) drawMovingAverage(200, "#5da9ff");
-    else {
-      ctx.fillStyle = "rgba(93, 169, 255, 0.86)";
-      ctx.font = "800 12px system-ui";
-      ctx.fillText("MA200 benötigt längeren Zeitraum", padding.left, padding.top + (state.activeIndicators.has("ma50") && series.length < 50 ? 34 : 18));
-    }
   }
 
-  ctx.fillStyle = "#99aabd";
-  ctx.font = "800 12px system-ui";
-  ctx.fillText(formatPrice(max, currency), 10, padding.top + 4);
-  ctx.fillText(formatPrice(min, currency), 10, height - padding.bottom);
-  const activeIndicators = [...state.activeIndicators].map((item) => item.toUpperCase()).join(" · ") || "Keine Indikatoren";
-  ctx.textAlign = "right";
-  ctx.fillText(`${rangeLabel(state.activeRange)} · ${state.chartType.toUpperCase()} · ${activeIndicators}`, width - padding.right, padding.top + 4);
-  ctx.textAlign = "left";
   if (Number.isInteger(options.hoverIndex) && series[options.hoverIndex]) {
     const hoverPoint = series[options.hoverIndex];
     const hoverX = xFor(options.hoverIndex);
@@ -1172,24 +1315,26 @@ function drawChart(canvas, series, currency, color = "#61df91", options = {}) {
     ctx.arc(hoverX, hoverY, 4, 0, Math.PI * 2);
     ctx.fill();
   }
-  state.lastChart = { series, currency, plot: { left: padding.left, right: width - padding.right, top: padding.top, bottom: height - padding.bottom, xStep } };
+  if (!isHeroChart) {
+    state.lastChart = { series, currency, plot: { left: padding.left, right: width - padding.right, top: padding.top, bottom: height - padding.bottom, xStep } };
+  }
 }
 
 function updateDetailSkeleton(asset) {
   document.querySelector("#detailType").textContent = asset.type;
   document.querySelector("#detailName").textContent = asset.name;
   document.querySelector("#detailSymbol").textContent = asset.symbol;
-  document.querySelector("#detailPrice").textContent = "Daten werden geladen";
-  document.querySelector("#detailChange").textContent = "Zeitraum wird geprüft";
+  document.querySelector("#detailPrice").textContent = "Letzter Stand";
+  document.querySelector("#detailChange").textContent = "Zeitraum: Heute";
   document.querySelector("#metricRegion").textContent = asset.region;
   document.querySelector("#metricRisk").textContent = asset.risk;
-  document.querySelector("#metricHealth").textContent = "Wird geprüft";
-  document.querySelector("#metricSource").textContent = "Quelle wird geprüft";
-  document.querySelector("#metricUpdated").textContent = "Wird geprüft";
-  document.querySelector("#metricPeriodChange").textContent = "Wird geladen";
-  document.querySelector("#metricHighLow").textContent = "Wird geladen";
+  document.querySelector("#metricHealth").textContent = "Demo-Modus";
+  document.querySelector("#metricSource").textContent = "Demo-Modus";
+  document.querySelector("#metricUpdated").textContent = "Aktualisiert";
+  document.querySelector("#metricPeriodChange").textContent = "Heute";
+  document.querySelector("#metricHighLow").textContent = "Letzter Stand";
   document.querySelector("#metricSentiment").textContent = "Neutral";
-  document.querySelector("#assetAiSummary").textContent = "Die Markteinordnung wird vorbereitet.";
+  document.querySelector("#assetAiSummary").textContent = "Kurzfazit, mögliche Treiber und Risiko-Hinweise erscheinen nach Asset-Auswahl.";
   document.querySelector("#assetOpportunities").textContent = "Wird nach Datenlage eingeordnet.";
   document.querySelector("#assetRisks").textContent = "Wird nach Volatilität und Asset-Typ eingeordnet.";
   document.querySelector("#assetWatch").textContent = "Achte auf Datenqualität, News-Kontext und ungewöhnliche Bewegungen.";
@@ -1198,13 +1343,15 @@ function updateDetailSkeleton(asset) {
   document.querySelector("#assetSimilar").textContent = "Ähnliche Assets werden vorbereitet.";
   document.querySelector("#assetMetricsDeep").textContent = mockFundamentals(asset);
   document.querySelector("#assetDataQuality").textContent = "Datenstatus, Quelle und Update-Zeit werden geprüft.";
-  document.querySelector("#assetNewsDeep").textContent = "News Intelligence wird vorbereitet.";
+  document.querySelector("#assetNewsDeep").textContent = "News Impact wird nach Relevanz, Assetklasse und Watchlist-Kontext eingeordnet.";
   document.querySelector("#assetNewsImpact").textContent = "Relevanz wird nach Marktbewegung und Watchlist-Kontext eingeordnet.";
   document.querySelector("#assetRiskDeep").textContent = "Risiko wird nach Volatilität, Assetklasse und Datenstatus eingeordnet.";
   document.querySelector("#assetRiskWatch").textContent = "Achte auf schnelle Bewegungen, Datenqualität und Zeithorizont.";
   document.querySelector("#assetNotePreview").textContent = state.notes[asset.symbol] || "Noch keine Notiz gespeichert.";
   document.querySelector("#assetAlertPreview").textContent = state.alerts[asset.symbol] || "Noch kein Alarm gespeichert.";
   document.querySelector("#heroAsset").textContent = asset.name;
+  document.querySelector("#heroSymbol").textContent = asset.symbol;
+  if (selectors.smartAlertAsset) selectors.smartAlertAsset.value = asset.name;
   selectors.chartLoading.textContent = "Chartdaten werden geladen";
   selectors.chartLoading.classList.remove("hidden");
   updateWatchlistButton();
@@ -1235,6 +1382,22 @@ function aiCopyForAsset(asset, chart) {
   };
 }
 
+function heroInsightCopy(asset, period, health) {
+  if (!Number.isFinite(period)) {
+    return { label: "Neutral", text: "Datenlage wird geprüft." };
+  }
+  if (period > 2) {
+    return { label: "Auffällig positiv", text: "Momentum und Datenqualität werden neutral eingeordnet." };
+  }
+  if (period < -2 || asset.risk === "Sehr hoch") {
+    return { label: "Vorsichtig", text: "Hohe Volatilität, weitere Bestätigung nötig." };
+  }
+  return {
+    label: sentimentFromChange(period),
+    text: health === "live" ? "Ruhiger Verlauf mit aktiver Datenquelle." : "Signal stabil, Datenstatus im Blick behalten."
+  };
+}
+
 function setDetailTab(tab, silent = false) {
   state.activeDetailTab = tab;
   const selectedButton = document.querySelector(`[data-detail-tab="${tab}"]`);
@@ -1251,6 +1414,22 @@ function setDetailTab(tab, silent = false) {
     });
   }
   if (!silent && selectedButton) showToast(`${selectedButton.textContent.trim()} geöffnet.`);
+}
+
+function scrollToDetailPanel() {
+  window.requestAnimationFrame(() => {
+    document.querySelector(".detail-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+
+function updateChartIndicatorNote(series) {
+  const note = document.querySelector("#chartIndicatorNote");
+  if (!note) return;
+  const messages = [];
+  if (state.activeIndicators.has("ma50") && series.length < 50) messages.push("MA50 benötigt mindestens 50 Datenpunkte.");
+  if (state.activeIndicators.has("ma200") && series.length < 200) messages.push("MA200 benötigt einen längeren Zeitraum.");
+  note.hidden = messages.length === 0;
+  note.textContent = messages.join(" ");
 }
 
 function updateDetailPanels(chart, period) {
@@ -1298,6 +1477,9 @@ function updateDetail(chart) {
   document.querySelector("#heroTrend").textContent = `${rangeLabel(state.activeRange)} ${formatPercent(period)}`;
   document.querySelector("#heroTrend").className = trendClass(period);
   document.querySelector("#heroSource").textContent = source;
+  const heroInsight = heroInsightCopy(asset, period, health);
+  document.querySelector("#heroInsight").textContent = heroInsight.label;
+  document.querySelector("#heroInsightText").textContent = heroInsight.text;
   const ai = aiCopyForAsset(asset, chart);
   document.querySelector("#assetAiSummary").textContent = ai.summary;
   document.querySelector("#assetOpportunities").textContent = ai.opportunities;
@@ -1311,8 +1493,9 @@ function updateDetail(chart) {
     .map((item) => `${item.name} (${item.symbol})`)
     .join(", ");
   updateDetailPanels(chart, period);
+  updateChartIndicatorNote(series);
   drawChart(selectors.chart, series, currency, color);
-  drawChart(selectors.heroChart, series.slice(-60), currency, color);
+  drawHeroSparkline(selectors.heroChart, series, color);
   selectors.chartLoading.classList.add("hidden");
   updateBriefing();
   updateWatchlistButton();
@@ -1322,6 +1505,7 @@ function updateDetail(chart) {
 
 async function selectAsset(asset) {
   state.activeAsset = asset;
+  setDetailTab("chart", true);
   trackViewedAsset(asset);
   updateDetailSkeleton(asset);
   queueRenderAssets();
@@ -1411,13 +1595,13 @@ function renderSavedWatchlist() {
   document.querySelector("#widgetWatchlist").textContent = `${savedAssets.length} Assets`;
   if (!savedAssets.length) {
     selectors.savedWatchlist.innerHTML = `
-      <article>
+      <article data-symbol="${asset.symbol}" tabindex="0">
         <span class="panel-label">Noch leer</span>
         <strong>Watchlist erstellen</strong>
         <p>Füge in „Märkte“ Werte hinzu. Später entstehen daraus persönliche Briefings, Preisalarme und News-Hinweise.</p>
       </article>
     `;
-    document.querySelector("#watchlistBriefing").textContent = "Noch keine persönliche Watchlist. Füge in „Märkte“ einen Wert hinzu.";
+  document.querySelector("#watchlistBriefing").textContent = "Füge 3 Werte hinzu, um dein persönliches Marktbriefing zu starten.";
     document.querySelector("#watchlistStats").innerHTML = "";
     renderTodayStrip();
     return;
@@ -1435,8 +1619,8 @@ function renderSavedWatchlist() {
   document.querySelector("#watchlistStats").innerHTML = `
     <article><span>Anzahl</span><strong>${savedAssets.length}</strong></article>
     <article><span>Gesamtperformance</span><strong class="${trendClass(avg)}">${formatPercent(avg)}</strong></article>
-    <article><span>Stärkster Gewinner</span><strong>${best ? best.asset.name : "Daten werden geladen"}</strong></article>
-    <article><span>Stärkster Verlierer</span><strong>${worst ? worst.asset.name : "Daten werden geladen"}</strong></article>
+    <article><span>Stärkster Gewinner</span><strong>${best ? best.asset.name : "Noch kein Signal"}</strong></article>
+    <article><span>Stärkster Verlierer</span><strong>${worst ? worst.asset.name : "Noch kein Signal"}</strong></article>
   `;
   selectors.savedWatchlist.innerHTML = savedAssets.map((asset) => {
     const quote = state.quoteCache.get(asset.symbol);
@@ -1445,9 +1629,9 @@ function renderSavedWatchlist() {
       <article>
         <span class="panel-label">${asset.type}</span>
         <strong>${asset.name}</strong>
-        <p>${asset.symbol} · ${quote ? formatPrice(quote.price, quote.currency) : "Daten werden geladen"} · <span class="${trendClass(quote?.changePct)}">${formatPercent(quote?.changePct)}</span></p>
+        <p>${asset.symbol} · ${quote ? formatPrice(quote.price, quote.currency) : "Letzter Stand"} · <span class="${trendClass(quote?.changePct)}">${formatPercent(quote?.changePct)}</span></p>
         <p>Risiko: ${asset.risk} · Sentiment: ${sentimentFromChange(quote?.changePct)} · ${healthLabel(health)}</p>
-        <button type="button" data-details-symbol="${asset.symbol}">Details öffnen</button>
+        <button type="button" data-details-symbol="${asset.symbol}">Chart öffnen</button>
         <button type="button" data-alert-symbol="${asset.symbol}">Alarm erstellen</button>
         <button type="button" data-note-symbol="${asset.symbol}">${state.notes[asset.symbol] ? "Notiz bearbeiten" : "Notiz hinzufügen"}</button>
         <button type="button" data-remove-symbol="${asset.symbol}">Entfernen</button>
@@ -1469,6 +1653,22 @@ function renderNewsFilter(silent = false) {
     card.hidden = !visible;
   });
   if (!silent) showToast("News-Filter aktualisiert.");
+}
+
+function renderNewsAssetActions() {
+  document.querySelectorAll(".news-card").forEach((card) => {
+    if (card.querySelector(".news-asset-actions")) return;
+    const symbols = (card.dataset.newsAssets || "")
+      .split(",")
+      .map((symbol) => symbol.trim())
+      .filter(Boolean);
+    if (!symbols.length) return;
+    const buttons = symbols.map((symbol) => {
+      const asset = assets.find((item) => item.symbol === symbol);
+      return asset ? `<button type="button" data-news-asset="${symbol}">${asset.symbol} Chart</button>` : "";
+    }).join("");
+    card.insertAdjacentHTML("beforeend", `<div class="news-asset-actions">${buttons}</div>`);
+  });
 }
 
 function focusBriefing(tab) {
@@ -1516,7 +1716,7 @@ function renderCompareTray() {
 
 function renderCompareWorkspace(compared = [...state.compareSymbols].map((symbol) => assets.find((asset) => asset.symbol === symbol)).filter(Boolean)) {
   if (!compared.length) {
-    selectors.compareSummary.textContent = "Noch keine Assets im Vergleich. Nutze „Vergleichen“ in der Market-Matrix.";
+    selectors.compareSummary.textContent = "Wähle zwei Assets in der Market-Matrix, um Risiko, Momentum, Datenqualität und News Impact zu vergleichen.";
     selectors.compareGrid.innerHTML = "";
     return;
   }
@@ -1530,11 +1730,12 @@ function renderCompareWorkspace(compared = [...state.compareSymbols].map((symbol
         <span class="panel-label">${asset.type}</span>
         <h3>${asset.name}</h3>
         <p>${asset.symbol} · ${asset.region} · ${assetSector(asset)}</p>
-        <p><b>Kurs:</b> ${quote ? formatPrice(quote.price, quote.currency) : "Daten werden geladen"}</p>
+        <p><b>Kurs:</b> ${quote ? formatPrice(quote.price, quote.currency) : "Letzter Stand"}</p>
         <p><b>24h:</b> <span class="${trendClass(quote?.changePct)}">${formatPercent(quote?.changePct)}</span></p>
         <p><b>Risiko:</b> ${asset.risk} · <b>AI:</b> ${sentimentFromChange(quote?.changePct)}</p>
         <p><b>Status:</b> ${healthLabel(health)}</p>
         <p>${mockFundamentals(asset)}</p>
+        <button type="button" data-compare-details="${asset.symbol}">Chart öffnen</button>
       </article>
     `;
   }).join("");
@@ -1584,11 +1785,11 @@ function openModal(mode, asset, meta = {}) {
   selectors.modalKicker.textContent = mode === "note" ? "Watchlist-Notiz" : mode === "chart" ? "Chart Workspace" : mode === "pro" ? "Pro Preview" : mode === "learning" ? "Mini-Lexikon" : "Preisalarm";
   selectors.modalTitle.textContent = mode === "note" ? `Notiz zu ${asset.name}` : mode === "chart" ? `${asset.name} im Analysemodus` : mode === "pro" ? `${meta.feature || "Pro"} freischalten` : mode === "learning" ? meta.term : `Alarm für ${asset.name}`;
   selectors.modalBody.textContent = mode === "note"
-    ? "Speichere eine kurze lokale Notiz. In der Produktversion würde sie mit deinem Konto synchronisiert."
+    ? "Speichere eine kurze lokale Notiz. Sie bleibt in diesem Browser verfügbar und unterstützt dein persönliches Briefing."
     : mode === "chart"
       ? `Großer Analysechart mit aktuellem Zeitraum ${state.activeRange.toUpperCase()}, Charttyp ${state.chartType} und aktiven Indikatoren.`
       : mode === "pro"
-        ? `${meta.benefit || "Diese Premium-Funktion erweitert den AI-Kontext um Watchlist, News, Risiko und Vergleichsdaten."} Nutze den Nexus Code, um Pro lokal zu aktivieren.`
+        ? `${meta.benefit || "Diese Premium-Funktion erweitert den AI-Kontext um Watchlist, News, Risiko und Vergleichsdaten."} Kaufe Pro oder nutze einen vorhandenen Promo-Code.`
         : mode === "learning"
           ? learningCopy(meta.term)
           : "Bereite einen Preisalarm vor. In dieser Demo wird der Zielwert lokal gespeichert.";
@@ -1603,8 +1804,8 @@ function openModal(mode, asset, meta = {}) {
           <li>Report-, Briefing- und Smart-Alert-Workflows</li>
         </ul>
         <div class="detail-actions">
-          <button class="primary-action" type="button" data-open-access-from-modal>Nexus Code einlösen</button>
-          <a class="secondary-action" href="#pricing">Pro ansehen</a>
+          <button class="primary-action" type="button" data-open-checkout-from-modal>Pro kaufen</button>
+          <button class="link-action" type="button" data-open-access-from-modal>Code einlösen</button>
         </div>
       </div>
     `;
@@ -1637,7 +1838,7 @@ function renderAlerts() {
   const entries = Object.entries(state.alerts);
   document.querySelector("#widgetAlerts").textContent = `${entries.length} aktiv`;
   if (!entries.length) {
-    selectors.alertsList.innerHTML = `<article><span class="panel-label">Noch keine Alarme</span><strong>Alarm erstellen</strong><p>Lege Preis-, Bewegungs-, News- oder Risikoalarme an. Diese Demo speichert lokal.</p></article>`;
+    selectors.alertsList.innerHTML = `<article><span class="panel-label">Alarm Center</span><strong>Alarm erstellen</strong><p>Lege Preis-, Bewegungs-, News- oder Risikoalarme an. Sie bleiben lokal in deinem Browser sichtbar.</p></article>`;
     return;
   }
   selectors.alertsList.innerHTML = entries.map(([symbol, condition]) => {
@@ -1647,7 +1848,7 @@ function renderAlerts() {
         <span class="panel-label">${asset?.type || "Asset"}</span>
         <strong>${asset?.name || symbol}</strong>
         <p>${condition}</p>
-        <button type="button" data-details-symbol="${symbol}">Details öffnen</button>
+        <button type="button" data-details-symbol="${symbol}">Chart öffnen</button>
         <button type="button" data-delete-alert="${symbol}">Alarm löschen</button>
       </article>
     `;
@@ -1667,9 +1868,9 @@ function updateDashboardWidgets() {
   document.querySelector("#widgetTopMover").textContent = `${sorted[0].asset.symbol} ${formatPercent(sorted[0].changePct)}`;
   document.querySelector("#widgetRisk").textContent = sorted.some((quote) => Math.abs(quote.changePct) > 2) ? "Auffällige Bewegung" : "Keine Extremwerte";
   const demoCount = quotes.filter((quote) => quote.health === "demo").length;
-  document.querySelector("#widgetDataHealth").textContent = demoCount ? `${demoCount} Demo-Fallbacks` : "Quellen aktiv";
+  document.querySelector("#widgetDataHealth").textContent = demoCount ? `${demoCount} Fallback-Quellen` : "Quellen aktiv";
   document.querySelector("#retentionAlerts").textContent = `${Object.keys(state.alerts).length + state.smartAlerts.length} aktiv`;
-  document.querySelector("#retentionWatchlist").textContent = state.savedSymbols.size ? `${state.savedSymbols.size} Werte im Fokus` : "Noch keine Watchlist";
+  document.querySelector("#retentionWatchlist").textContent = state.savedSymbols.size ? `${state.savedSymbols.size} Werte im Fokus` : "3 Werte hinzufügen";
   renderTodayStrip();
 }
 
@@ -1684,10 +1885,10 @@ function renderTodayStrip() {
   document.querySelector("#todayReason").textContent = focus
     ? `${focus.asset.type} · ${assetSector(focus.asset)} · ${healthLabel(focus.health)}. Auffälligkeit nach aktueller Bewegung, keine Anlageberatung.`
     : "Sobald Kurse geladen sind, wird die stärkste relevante Bewegung gezeigt.";
-  document.querySelector("#todayWatchlist").textContent = watch ? `${watch.asset.name} braucht Aufmerksamkeit` : state.savedSymbols.size ? "Watchlist lädt Daten" : "Noch keine Watchlist";
+  document.querySelector("#todayWatchlist").textContent = watch ? `${watch.asset.name} braucht Aufmerksamkeit` : state.savedSymbols.size ? "Watchlist wird priorisiert" : "Watchlist starten";
   document.querySelector("#todayWatchlistReason").textContent = watch
     ? `Watchlist-Bewegung ${formatPercent(watch.changePct)}. Prüfe News, Risiko und gespeicherte Notizen.`
-    : state.savedSymbols.size ? "Daten werden geladen und danach priorisiert." : "Füge Werte hinzu, um persönliche Daily Checks zu erhalten.";
+    : state.savedSymbols.size ? "Signale werden nach Bewegung, Risiko und Datenstatus priorisiert." : "Füge 3 Werte hinzu, um persönliche Daily Checks zu erhalten.";
   document.querySelector("#todayRecent").textContent = recent.length ? recent.slice(0, 3).map((asset) => asset.symbol).join(" · ") : state.activeAsset.symbol;
   document.querySelector("#todayRecentReason").textContent = recent.length
     ? `Zuletzt angesehen: ${recent.slice(0, 3).map((asset) => asset.name).join(", ")}.`
@@ -1697,7 +1898,9 @@ function renderTodayStrip() {
     : state.lastVisit ? "Marktstatus aktualisiert" : "Willkommen im Cockpit";
   document.querySelector("#heroToday").textContent = focus ? `${focus.asset.symbol} ${formatPercent(focus.changePct)}` : "Briefing lädt";
   document.querySelector("#heroPulse").textContent = `${state.savedSymbols.size} Assets`;
-  document.querySelector("#heroInsight").textContent = focus ? sentimentFromChange(focus.changePct) : "Neutral";
+  if (!state.lastChart) {
+    document.querySelector("#heroInsight").textContent = focus ? sentimentFromChange(focus.changePct) : "Neutral";
+  }
 }
 
 function renderPremiumModules() {
@@ -1712,7 +1915,7 @@ function renderPremiumModules() {
   const cached = state.chartCache.get(`${state.activeAsset.symbol}:${state.activeRange}`);
   if (cached) {
     const confidence = cached.health === "live" ? "Hoch" : cached.health === "delayed" ? "Mittel" : "Niedrig";
-    selectors.confidenceBox.textContent = `Datenlage: ${confidence}. Verwendet: Kursbewegung, Volatilität, Asset-Typ ${state.activeAsset.type}, Watchlist-Kontext, News-Demo und Quelle ${cached.source}.`;
+    selectors.confidenceBox.textContent = `Datenlage: ${confidence}. Verwendet: Kursbewegung, Volatilität, Asset-Typ ${state.activeAsset.type}, Watchlist-Kontext, News Impact und Quelle ${cached.source}.`;
   }
 }
 
@@ -1785,7 +1988,7 @@ function renderSmartAlerts() {
     selectors.smartAlertsList.innerHTML = `<article><strong>Noch keine Smart Alerts</strong><p>Free: Preisalarme. Pro: Volatilität, News Impact und Trendabweichungen.</p></article>`;
     return;
   }
-  selectors.smartAlertsList.innerHTML = state.smartAlerts.map((alert, index) => `<article><strong>${alert.asset}</strong><p>${alert.type} · ${alert.created}</p><small>Pro prüft Bewegung, News-Kontext, Risikoänderung und Watchlist-Bezug.</small><button type="button" data-delete-smart-alert="${index}">Löschen</button></article>`).join("");
+  selectors.smartAlertsList.innerHTML = state.smartAlerts.map((alert, index) => `<article><strong>${alert.asset}</strong><p>${alert.type} · ${alert.condition || "Auffällige Bewegung beobachten"}</p><small>${alert.created} · Pro prüft Bewegung, News-Kontext, Risikoänderung und Watchlist-Bezug.</small><button type="button" data-delete-smart-alert="${index}">Löschen</button></article>`).join("");
 }
 
 function proDashboardHTML(action) {
@@ -1798,18 +2001,18 @@ function proDashboardHTML(action) {
     return `<span class="panel-label">Watchlist Intelligence</span><strong>${context.watchlist.length ? `${top.asset.name} ist am auffälligsten` : "Watchlist aufbauen"}</strong><p>Gewinner: ${top.asset.symbol} ${formatPercent(top.changePct)} · Schwächer: ${weak.asset.symbol} ${formatPercent(weak.changePct)} · Smart Alerts: ${smartCount}. ${context.watchlist.length ? "Pro priorisiert News, Risiko und offene Alerts." : "Füge Werte hinzu, damit Pro dein tägliches Pulse-Briefing erstellt."}</p>`;
   }
   if (action === "deep") {
-    return `<span class="panel-label">Deep Asset Analysis</span><strong>${context.asset.name} Deep Dive</strong><p>${proDeepDive(context.asset, context)} Confidence: ${confidenceScore(context)}. Basis: Kursdaten, Volatilität, Asset-Typ, Watchlist-Kontext, News-Demo und Quelle ${context.dataHealth}.</p>`;
+    return `<span class="panel-label">Deep Asset Analysis</span><strong>${context.asset.name} Deep Dive</strong><p>${proDeepDive(context.asset, context)} Confidence: ${confidenceScore(context)}. Basis: Kursdaten, Volatilität, Asset-Typ, Watchlist-Kontext, News Impact und Quelle ${context.dataHealth}.</p>`;
   }
   if (action === "news") {
     const news = context.newsItems[0];
-    return `<span class="panel-label">News Impact Pro</span><strong>${news?.title || "News Impact wird geprüft"}</strong><p>Direkt betroffen: ${news?.assets || context.asset.symbol}. Indirekt relevant: ${assetSector(context.asset)}. Pro zeigt mögliche Chancen, Risiken und Beobachtungspunkte für deine Watchlist.</p>`;
+    return `<span class="panel-label">News Impact Pro</span><strong>${news?.title || "Watchlist-News im Fokus"}</strong><p>Direkt betroffen: ${news?.assets || context.asset.symbol}. Indirekt relevant: ${assetSector(context.asset)}. Pro zeigt mögliche Chancen, Risiken und Beobachtungspunkte für deine Watchlist.</p>`;
   }
   if (action === "compare") {
     const pair = (context.compareList.length ? context.compareList : [context.asset, assets.find((asset) => asset.symbol === "NVDA")]).filter(Boolean).slice(0, 2);
     return `<span class="panel-label">Compare Battle Pro</span><strong>${pair.map((asset) => asset.symbol).join(" vs ")}</strong><p>${pair.map((asset) => `${asset.symbol}: Risiko ${asset.risk}, ${sentimentFromChange(state.quoteCache.get(asset.symbol)?.changePct)}, ${assetSector(asset)}`).join(" · ")}. Pro ergänzt Momentum-, Defensive- und Datenqualitäts-Scores.</p>`;
   }
   if (action === "report") {
-    return `<span class="panel-label">Reports & Export</span><strong>Report vorbereitet</strong><p>Assets: ${[context.asset, ...context.watchlist.slice(0, 4)].map((asset) => asset.symbol).join(", ")}. Zeitraum: ${context.activeTimeframe}. AI-Fazit, Risiken, News Impact und Datenqualität wurden als Demo-Report zusammengestellt.</p><button class="secondary-action" type="button" data-report-export>Als PDF exportieren</button>`;
+    return `<span class="panel-label">Reports & Export</span><strong>Report vorbereitet</strong><p>Assets: ${[context.asset, ...context.watchlist.slice(0, 4)].map((asset) => asset.symbol).join(", ")}. Zeitraum: ${context.activeTimeframe}. AI-Fazit, Risiken, News Impact und Datenqualität wurden als Report-Preview zusammengestellt.</p><button class="secondary-action" type="button" data-report-export>Als PDF exportieren</button>`;
   }
   return `<span class="panel-label">AI Assistant Pro</span><strong>Kontextanalyse bereit</strong><p>${generateAssistantResponse("Generiere mein Tagesbriefing", context).replace(/\n/g, "<br>")}</p>`;
 }
@@ -1950,7 +2153,7 @@ function generateAssistantResponse(message, context = assistantContext()) {
 
   if (["news", "nachricht", "impact", "ereignis"].some((word) => lower.includes(word))) {
     return formatAssistantSections([
-      ["Kurzfazit", relevantNews.length ? `${relevantNews[0].title} ist für ${active.name} möglicherweise relevant.` : `Für ${active.name} gibt es in der Demo keinen direkten News-Treffer; indirekte Marktimpulse bleiben möglich.`],
+      ["Kurzfazit", relevantNews.length ? `${relevantNews[0].title} ist für ${active.name} möglicherweise relevant.` : `Für ${active.name} gibt es aktuell keinen direkten News-Treffer; indirekte Marktimpulse bleiben möglich.`],
       ["News Impact", relevantNews.length ? relevantNews.map((item) => `${item.relevance === "high" ? "Hoher" : "Mittlerer"} Impact · ${item.assets}`).join(" · ") : "Pro würde Watchlist- und Sektorbezug genauer prüfen."],
       ["Worauf achten", "Reaktion im Kurs, Volumen, ähnliche Assets und ob die Nachricht nur kurzfristiges Sentiment oder fundamentalen Kontext betrifft."],
       ["Hinweis", "Keine Anlageberatung."]
@@ -2064,11 +2267,12 @@ selectors.assetGrid.addEventListener("click", (event) => {
   if (detailsButton) {
     event.stopPropagation();
     selectAsset(asset);
-    document.querySelector(".detail-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollToDetailPanel();
     showToast(`${asset.name} geöffnet.`);
     return;
   }
   selectAsset(asset);
+  scrollToDetailPanel();
   showToast(`${asset.name} ausgewählt.`);
 });
 
@@ -2078,7 +2282,10 @@ selectors.assetGrid.addEventListener("keydown", (event) => {
   if (!card) return;
   event.preventDefault();
   const asset = assets.find((item) => item.symbol === card.dataset.symbol);
-  if (asset) selectAsset(asset);
+  if (asset) {
+    selectAsset(asset);
+    scrollToDetailPanel();
+  }
 });
 
 document.querySelector("#tickerGrid").addEventListener("click", (event) => {
@@ -2086,8 +2293,8 @@ document.querySelector("#tickerGrid").addEventListener("click", (event) => {
   if (!card) return;
   const asset = assets.find((item) => item.symbol === card.dataset.symbol);
   if (asset) {
-    document.querySelector("#markets").scrollIntoView({ behavior: "smooth", block: "start" });
     selectAsset(asset);
+    scrollToDetailPanel();
   }
 });
 
@@ -2134,8 +2341,8 @@ selectors.savedWatchlist.addEventListener("click", (event) => {
   if (details) {
     const asset = assets.find((item) => item.symbol === details.dataset.detailsSymbol);
     if (asset) {
-      document.querySelector("#markets").scrollIntoView({ behavior: "smooth", block: "start" });
       selectAsset(asset);
+      scrollToDetailPanel();
     }
   }
 });
@@ -2155,7 +2362,7 @@ selectors.assetTableBody.addEventListener("click", (event) => {
     const action = actionButton.dataset.tableAction;
     if (action === "details") {
       selectAsset(asset);
-      document.querySelector(".detail-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      scrollToDetailPanel();
       showToast(`${asset.name} geöffnet.`);
       return;
     }
@@ -2177,6 +2384,7 @@ selectors.assetTableBody.addEventListener("click", (event) => {
   const asset = assets.find((item) => item.symbol === row.dataset.symbol);
   if (asset) {
     selectAsset(asset);
+    scrollToDetailPanel();
     showToast(`${asset.name} ausgewählt.`);
   }
 });
@@ -2187,7 +2395,7 @@ selectors.heatmapGrid.addEventListener("click", (event) => {
   const asset = assets.find((item) => item.symbol === cell.dataset.symbol);
   if (asset) {
     selectAsset(asset);
-    document.querySelector(".detail-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollToDetailPanel();
     showToast(`${asset.name} aus der Heatmap geöffnet.`);
   }
 });
@@ -2235,6 +2443,19 @@ selectors.clearCompare.addEventListener("click", () => {
   showToast("Vergleich wurde geleert.");
 });
 
+document.querySelectorAll("#compareGrid, #compareBattle").forEach((area) => {
+  area.addEventListener("click", (event) => {
+    const card = event.target.closest("[data-symbol], article");
+    if (!card) return;
+    const symbol = card.dataset.symbol || card.querySelector("small")?.textContent.trim().split(/\s+/)[0];
+    const asset = assets.find((item) => item.symbol === symbol);
+    if (!asset) return;
+    selectAsset(asset);
+    scrollToDetailPanel();
+    showToast(`${asset.name} Chart geöffnet.`);
+  });
+});
+
 selectors.createGlobalAlert.addEventListener("click", () => {
   openModal("alert", state.activeAsset);
 });
@@ -2244,7 +2465,7 @@ selectors.clearAlerts.addEventListener("click", () => {
   saveAlerts();
   renderAlerts();
   document.querySelector("#assetAlertPreview").textContent = "Noch kein Alarm gespeichert.";
-  showToast("Alle Demo-Alarme wurden gelöscht.");
+  showToast("Alle Alarme wurden gelöscht.");
 });
 
 selectors.alertsList.addEventListener("click", (event) => {
@@ -2262,8 +2483,8 @@ selectors.alertsList.addEventListener("click", (event) => {
   if (details) {
     const asset = assets.find((item) => item.symbol === details.dataset.detailsSymbol);
     if (asset) {
-      document.querySelector("#markets").scrollIntoView({ behavior: "smooth", block: "start" });
       selectAsset(asset);
+      scrollToDetailPanel();
     }
   }
 });
@@ -2275,6 +2496,23 @@ document.querySelector("#watchlistGroups").addEventListener("click", (event) => 
   button.classList.add("active");
   state.activeGroup = button.dataset.group;
   showToast(`Watchlist-Gruppe: ${state.activeGroup}`);
+});
+
+document.querySelector("#watchlistStarter")?.addEventListener("click", (event) => {
+  const symbol = event.target.closest("[data-suggest-watchlist]")?.dataset.suggestWatchlist;
+  const asset = assets.find((item) => item.symbol === symbol);
+  if (!asset) return;
+  if (!state.savedSymbols.has(asset.symbol)) {
+    state.savedSymbols.add(asset.symbol);
+    saveWatchlist();
+    renderSavedWatchlist();
+    queueRenderAssets();
+    updateWatchlistButton();
+    showToast(`${asset.name} wurde zur Watchlist hinzugefügt.`);
+  } else {
+    selectAsset(asset);
+    scrollToDetailPanel();
+  }
 });
 
 document.querySelector("#dashboardWidgets").addEventListener("click", (event) => {
@@ -2333,12 +2571,18 @@ selectors.modal.addEventListener("click", (event) => {
     openAccessModal();
     return;
   }
+  if (event.target.closest("[data-open-checkout-from-modal]")) {
+    closeModal();
+    openCheckout(state.checkoutPlan);
+    return;
+  }
   if (event.target === selectors.modal) closeModal();
 });
 
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !selectors.modal.hidden) closeModal();
   if (event.key === "Escape" && !selectors.accessModal.hidden) closeAccessModal();
+  if (event.key === "Escape" && !selectors.checkoutModal.hidden) closeCheckout();
   if (event.key === "Escape" && !selectors.assistantDrawer.hidden) selectors.assistantDrawer.hidden = true;
 });
 
@@ -2377,6 +2621,17 @@ document.querySelector("#newsFilters").addEventListener("click", (event) => {
 });
 
 document.querySelector("#newsGrid").addEventListener("click", (event) => {
+  const assetButton = event.target.closest("[data-news-asset]");
+  if (assetButton) {
+    event.stopPropagation();
+    const asset = assets.find((item) => item.symbol === assetButton.dataset.newsAsset);
+    if (asset) {
+      selectAsset(asset);
+      scrollToDetailPanel();
+      showToast(`${asset.name} Chart geöffnet.`);
+    }
+    return;
+  }
   const card = event.target.closest(".news-card");
   if (!card) return;
   card.classList.toggle("open");
@@ -2406,12 +2661,54 @@ document.querySelectorAll(".plan-button").forEach((button) => {
         document.querySelector("#proDashboard")?.scrollIntoView({ behavior: "smooth", block: "start" });
         runProDashboardAction("assistant");
       } else {
-        openAccessModal();
+        openCheckout(state.checkoutPlan);
       }
     } else {
-      showToast(`${button.dataset.plan}: Zugang wird vorbereitet. Payment ist in dieser Demo noch nicht aktiv.`);
+      showToast(`${button.dataset.plan}: Zugang und Kontofunktionen werden vorbereitet.`);
     }
   });
+});
+
+selectors.pricingAccessCode?.addEventListener("click", openAccessModal);
+
+selectors.billingToggle?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-plan-cycle]");
+  if (!button) return;
+  state.checkoutPlan = button.dataset.planCycle;
+  localStorage.setItem("selectedBillingCycle", state.checkoutPlan);
+  localStorage.setItem("marketpilot-billing-cycle", state.checkoutPlan);
+  localStorage.setItem("marketpilot-checkout-plan", state.checkoutPlan);
+  updateCheckoutUI();
+});
+
+selectors.checkoutClose?.addEventListener("click", closeCheckout);
+selectors.checkoutModal?.addEventListener("click", (event) => {
+  if (event.target === selectors.checkoutModal) closeCheckout();
+});
+selectors.checkoutAccessCode?.addEventListener("click", () => {
+  closeCheckout();
+  openAccessModal();
+});
+selectors.completeCheckout?.addEventListener("click", () => {
+  if (state.isProUser) {
+    closeCheckout();
+    document.querySelector("#proDashboard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    runProDashboardAction("assistant");
+    return;
+  }
+  if (state.checkoutLoading) return;
+  state.checkoutLoading = true;
+  selectors.completeCheckout.disabled = true;
+  selectors.completeCheckout.textContent = "Pro wird aktiviert...";
+  selectors.checkoutMessage.textContent = "Pro wird aktiviert...";
+  window.setTimeout(() => {
+    activatePro("purchase");
+    selectors.checkoutMessage.textContent = "Pro aktiviert.";
+    selectors.completeCheckout.textContent = "Zum Pro Dashboard";
+    selectors.completeCheckout.disabled = false;
+    state.checkoutLoading = false;
+    showToast("Pro aktiviert");
+  }, 900);
 });
 
 function openAccessModal() {
@@ -2429,6 +2726,14 @@ function closeAccessModal() {
 }
 
 selectors.accessCodeButton.addEventListener("click", openAccessModal);
+selectors.openCheckout?.addEventListener("click", () => {
+  if (state.isProUser) {
+    document.querySelector("#proDashboard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    runProDashboardAction("assistant");
+  } else {
+    openCheckout(state.checkoutPlan);
+  }
+});
 selectors.openAccessModal.addEventListener("click", openAccessModal);
 selectors.accessClose.addEventListener("click", closeAccessModal);
 selectors.accessCancel.addEventListener("click", closeAccessModal);
@@ -2444,14 +2749,9 @@ selectors.accessModal.addEventListener("click", (event) => {
 async function redeemAccessCode() {
   const code = selectors.accessCodeInput.value.trim();
   if (await validateAccessCode(code)) {
-    state.isProUser = true;
-    saveProState();
-    updateProUI();
-    document.body.classList.add("pro-just-activated");
-    window.setTimeout(() => document.body.classList.remove("pro-just-activated"), 1600);
+    activatePro("code");
     closeAccessModal();
     showToast("Pro-Zugang aktiviert.");
-    renderPremiumModules();
   } else {
     selectors.accessCodeMessage.textContent = "Code nicht gültig.";
   }
@@ -2459,6 +2759,7 @@ async function redeemAccessCode() {
 
 function resetDemoAccess() {
   state.isProUser = false;
+  state.proAccessMethod = "";
   saveProState();
   updateProUI();
   renderPremiumModules();
@@ -2473,8 +2774,8 @@ selectors.resetDemoAccess.addEventListener("click", resetDemoAccess);
 selectors.resetDemoAccessLegal.addEventListener("click", resetDemoAccess);
 selectors.openProDashboard?.addEventListener("click", () => {
   if (!state.isProUser) {
-    openAccessModal();
-    showToast("Pro Dashboard mit Nexus Code freischalten.");
+    openCheckout(state.checkoutPlan);
+    showToast("Pro kaufen. Code optional im Checkout.");
     return;
   }
   runProDashboardAction("assistant");
@@ -2482,15 +2783,15 @@ selectors.openProDashboard?.addEventListener("click", () => {
 selectors.proDashboard?.addEventListener("click", (event) => {
   const action = event.target.closest("[data-pro-dashboard-action]")?.dataset.proDashboardAction;
   if (action) runProDashboardAction(action);
-  if (event.target.closest("[data-report-export]")) showToast("Export vorbereitet. PDF-Export ist in dieser Demo simuliert.");
+  if (event.target.closest("[data-report-export]")) showToast("Export vorbereitet. PDF-Export ist als Preview markiert.");
 });
 
 selectors.premiumGrid?.addEventListener("click", (event) => {
   if (state.isProUser) return;
   const card = event.target.closest(".premium-card.requires-pro");
   if (!card || event.target.closest("select")) return;
-  openAccessModal();
-  showToast(`${card.dataset.featureCard || "Pro"} mit Nexus Code freischalten.`);
+  openCheckout(state.checkoutPlan);
+  showToast(`${card.dataset.featureCard || "Pro"} mit Pro freischalten.`);
 });
 
 selectors.assistantFab.addEventListener("click", () => {
@@ -2530,12 +2831,18 @@ selectors.radarTabs.addEventListener("click", (event) => {
 selectors.marketRadar.addEventListener("click", (event) => {
   const dot = event.target.closest("[data-symbol]");
   const asset = dot && assets.find((item) => item.symbol === dot.dataset.symbol);
-  if (asset) selectAsset(asset);
+  if (asset) {
+    selectAsset(asset);
+    scrollToDetailPanel();
+  }
 });
 selectors.riskMap.addEventListener("click", (event) => {
   const tile = event.target.closest("[data-symbol]");
   const asset = tile && assets.find((item) => item.symbol === tile.dataset.symbol);
-  if (asset) selectAsset(asset);
+  if (asset) {
+    selectAsset(asset);
+    scrollToDetailPanel();
+  }
 });
 selectors.generateWatchlistBriefing.addEventListener("click", () => {
   if (!requirePro("Watchlist Briefing", "Pro generiert persönliche Briefings aus Watchlist, News, Risiken und Alarmen.")) return;
@@ -2548,9 +2855,12 @@ selectors.generateWatchlistBriefing.addEventListener("click", () => {
 selectors.createSmartAlert.addEventListener("click", () => {
   const type = selectors.smartAlertType.value;
   if (type !== "price" && !requirePro("Smart Alerts", "Pro schaltet Volatilitäts-, News-Impact- und Trendalarme frei.")) return;
-  state.smartAlerts.unshift({ asset: state.activeAsset.name, type, created: new Date().toLocaleString("de-DE") });
+  const assetName = selectors.smartAlertAsset.value.trim() || state.activeAsset.name;
+  const condition = selectors.smartAlertCondition.value.trim() || "Auffällige Bewegung beobachten";
+  state.smartAlerts.unshift({ asset: assetName, type, condition, created: new Date().toLocaleString("de-DE") });
   saveSmartAlerts();
   renderSmartAlerts();
+  selectors.smartAlertCondition.value = "";
   showToast("Smart Alert gespeichert.");
 });
 selectors.smartAlertsList.addEventListener("click", (event) => {
@@ -2620,7 +2930,7 @@ selectors.chart.addEventListener("mousemove", (event) => {
   selectors.chartTooltip.innerHTML = `
     ${new Date(point.time).toLocaleString("de-DE", { dateStyle: "short", timeStyle: state.activeRange === "1d" ? "short" : undefined })}<br>
     <b>${formatPrice(point.value, chart.currency)}</b><br>
-    <span class="${trendClass(move)}">${formatPercent(move)}</span>${point.volume ? `<br>Volumen ${new Intl.NumberFormat("de-DE", { notation: "compact" }).format(point.volume)}` : ""}
+    <span class="${trendClass(move)}">${formatPercent(move)}</span>${point.volume ? `<br>Volumen ${formatCompactNumber(point.volume)}` : ""}
   `;
 });
 
@@ -2639,10 +2949,10 @@ window.addEventListener("resize", () => {
   if (cached) updateDetail(cached);
 });
 
-setStatus("Marktdaten werden geladen", "loading");
+setStatus("Daten werden aktualisiert", "loading");
 bootInterfaceEffects();
 setupActiveNavigation();
-setDetailTab("overview", true);
+setDetailTab("chart", true);
 renderAssets();
 renderSavedWatchlist();
 renderCompareTray();
@@ -2650,5 +2960,6 @@ renderAlerts();
 updateDashboardWidgets();
 renderPremiumModules();
 renderNewsFilter(true);
+renderNewsAssetActions();
 renderTickerGrid();
 selectAsset(state.activeAsset);
