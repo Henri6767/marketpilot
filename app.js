@@ -139,6 +139,7 @@ const selectors = {
   modalInputLabel: document.querySelector("#modalInputLabel"),
   mobileMenuButton: document.querySelector("#mobileMenuButton"),
   mainNav: document.querySelector("#mainNav"),
+  navProStatus: document.querySelector("#navProStatus"),
   dataSourceButton: document.querySelector("#dataSourceButton"),
   dataDrawer: document.querySelector("#dataDrawer"),
   drawerClose: document.querySelector("#drawerClose"),
@@ -148,10 +149,17 @@ const selectors = {
   accessClose: document.querySelector("#accessClose"),
   accessCancel: document.querySelector("#accessCancel"),
   accessCodeInput: document.querySelector("#accessCodeInput"),
+  toggleAccessCode: document.querySelector("#toggleAccessCode"),
   accessCodeMessage: document.querySelector("#accessCodeMessage"),
   redeemAccessCode: document.querySelector("#redeemAccessCode"),
   resetDemoAccess: document.querySelector("#resetDemoAccess"),
   resetDemoAccessLegal: document.querySelector("#resetDemoAccessLegal"),
+  premiumGrid: document.querySelector(".premium-grid"),
+  proDashboard: document.querySelector("#proDashboard"),
+  proDashboardOutput: document.querySelector("#proDashboardOutput"),
+  openProDashboard: document.querySelector("#openProDashboard"),
+  proPlanButton: document.querySelector("#proPlanButton"),
+  retentionGrid: document.querySelector(".retention-grid"),
   assistantFab: document.querySelector("#assistantFab"),
   assistantQuota: document.querySelector("#assistantQuota"),
   assistantDrawer: document.querySelector("#assistantDrawer"),
@@ -161,6 +169,8 @@ const selectors = {
   assistantInput: document.querySelector("#assistantInput"),
   assistantSuggestions: document.querySelector("#assistantSuggestions"),
   assistantAccessText: document.querySelector("#assistantAccessText"),
+  assistantContextLine: document.querySelector("#assistantContextLine"),
+  assistantLimit: document.querySelector("#assistantLimit"),
   marketRadar: document.querySelector("#marketRadar"),
   radarTabs: document.querySelector("#radarTabs"),
   riskMap: document.querySelector("#riskMap"),
@@ -225,6 +235,31 @@ const ACCESS_CONFIG = {
 async function validateAccessCode(code) {
   // Later this can become: return fetch("/api/access/validate", { method: "POST", body: JSON.stringify({ code }) });
   return ACCESS_CONFIG.validDemoCodes.includes(code);
+}
+
+function bootInterfaceEffects() {
+  const topbar = document.querySelector(".topbar");
+  const updateTopbar = () => topbar?.classList.toggle("scrolled", window.scrollY > 24);
+  updateTopbar();
+  window.addEventListener("scroll", updateTopbar, { passive: true });
+
+  const revealItems = document.querySelectorAll("main > section, .premium-card, .asset-card, .news-card, .dashboard-widget");
+  if (!("IntersectionObserver" in window)) {
+    revealItems.forEach((item) => item.classList.add("is-visible"));
+    return;
+  }
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+  revealItems.forEach((item) => {
+    item.classList.add("reveal-item");
+    observer.observe(item);
+  });
 }
 
 function formatPrice(value, currency = "EUR") {
@@ -372,16 +407,27 @@ function requirePro(feature, benefit) {
 }
 
 function updateProUI() {
+  document.body.classList.toggle("is-pro", state.isProUser);
+  document.body.classList.toggle("is-free", !state.isProUser);
   document.querySelector("#proStatusLabel").textContent = state.isProUser ? "Pro aktiv" : "Free";
   document.querySelector("#proStatusText").textContent = state.isProUser
     ? "Alle Demo-Pro-Funktionen sind freigeschaltet: Assistant, Smart Alerts, Briefings und Scanner."
     : "Free: 3 AI-Fragen pro Tag, Basis-Insights und sichtbare Pro-Vorschau.";
   selectors.accessCodeButton.textContent = state.isProUser ? "Pro aktiv" : "Nexus Code";
+  if (selectors.navProStatus) selectors.navProStatus.textContent = state.isProUser ? "Pro Active" : "Free";
   selectors.openAccessModal.textContent = state.isProUser ? "Pro aktiv" : "Nexus Code einlösen";
   selectors.openAccessModal.setAttribute("aria-pressed", String(state.isProUser));
+  if (selectors.proPlanButton) selectors.proPlanButton.textContent = state.isProUser ? "Pro Dashboard öffnen" : "Nexus Code einlösen";
   selectors.resetDemoAccess.hidden = !state.isProUser;
   selectors.resetDemoAccessLegal.hidden = !state.isProUser;
   selectors.assistantQuota.textContent = remainingAssistantQuestions();
+  if (selectors.assistantLimit) {
+    selectors.assistantLimit.textContent = state.isProUser ? "Pro aktiv · unbegrenzte Fragen" : `${remainingAssistantQuestions()}/3 Free-Fragen übrig`;
+  }
+  if (selectors.assistantContextLine) {
+    const quote = state.quoteCache.get(state.activeAsset.symbol);
+    selectors.assistantContextLine.textContent = `${state.activeAsset.name} · ${rangeLabel(state.activeRange)} · Risiko ${state.activeAsset.risk} · ${healthLabel(quote?.health)}`;
+  }
   selectors.assistantAccessText.textContent = state.isProUser
     ? "Pro: unbegrenzte Demo-Fragen mit Watchlist-, News- und Risikoanalyse."
     : `Free: noch ${remainingAssistantQuestions()} AI-Fragen heute. Pro schaltet unbegrenzte Analysen frei.`;
@@ -1546,6 +1592,23 @@ function openModal(mode, asset, meta = {}) {
         : mode === "learning"
           ? learningCopy(meta.term)
           : "Bereite einen Preisalarm vor. In dieser Demo wird der Zielwert lokal gespeichert.";
+  if (mode === "pro") {
+    selectors.modalBody.innerHTML = `
+      <div class="upgrade-preview">
+        <strong>${escapeHTML(meta.feature || "Pro Feature")}</strong>
+        <p>${escapeHTML(meta.benefit || "Pro erweitert den AI-Kontext um Watchlist, News, Risiko und Vergleichsdaten.")}</p>
+        <ul>
+          <li>Kontext aus aktivem Asset, Watchlist, News und Alerts</li>
+          <li>Deep-Dive-Preview mit Confidence/Data Quality</li>
+          <li>Report-, Briefing- und Smart-Alert-Workflows</li>
+        </ul>
+        <div class="detail-actions">
+          <button class="primary-action" type="button" data-open-access-from-modal>Nexus Code einlösen</button>
+          <a class="secondary-action" href="#pricing">Pro ansehen</a>
+        </div>
+      </div>
+    `;
+  }
   selectors.modalInputLabel.textContent = mode === "note" ? "Notiz" : "Bedingung";
   selectors.modalInput.placeholder = mode === "note" ? "z. B. wegen Earnings beobachten" : "z. B. Preis über 65000 €";
   if (mode === "chart") {
@@ -1605,6 +1668,8 @@ function updateDashboardWidgets() {
   document.querySelector("#widgetRisk").textContent = sorted.some((quote) => Math.abs(quote.changePct) > 2) ? "Auffällige Bewegung" : "Keine Extremwerte";
   const demoCount = quotes.filter((quote) => quote.health === "demo").length;
   document.querySelector("#widgetDataHealth").textContent = demoCount ? `${demoCount} Demo-Fallbacks` : "Quellen aktiv";
+  document.querySelector("#retentionAlerts").textContent = `${Object.keys(state.alerts).length + state.smartAlerts.length} aktiv`;
+  document.querySelector("#retentionWatchlist").textContent = state.savedSymbols.size ? `${state.savedSymbols.size} Werte im Fokus` : "Noch keine Watchlist";
   renderTodayStrip();
 }
 
@@ -1627,6 +1692,12 @@ function renderTodayStrip() {
   document.querySelector("#todayRecentReason").textContent = recent.length
     ? `Zuletzt angesehen: ${recent.slice(0, 3).map((asset) => asset.name).join(", ")}.`
     : "Geöffnete Assets erscheinen hier als Schnellzugriff.";
+  document.querySelector("#retentionVisit").textContent = focus
+    ? `${focus.asset.symbol} ist jetzt relevant`
+    : state.lastVisit ? "Marktstatus aktualisiert" : "Willkommen im Cockpit";
+  document.querySelector("#heroToday").textContent = focus ? `${focus.asset.symbol} ${formatPercent(focus.changePct)}` : "Briefing lädt";
+  document.querySelector("#heroPulse").textContent = `${state.savedSymbols.size} Assets`;
+  document.querySelector("#heroInsight").textContent = focus ? sentimentFromChange(focus.changePct) : "Neutral";
 }
 
 function renderPremiumModules() {
@@ -1675,11 +1746,17 @@ function renderRiskMap() {
 function renderWatchlistPulse() {
   const saved = [...state.savedSymbols].map((symbol) => assets.find((asset) => asset.symbol === symbol)).filter(Boolean);
   if (!saved.length) {
-    selectors.watchlistPulse.innerHTML = `<article><strong>Starte mit 3 Assets</strong><p>Füge Werte hinzu, um Pulse, News und Risiko-Hinweise zu erhalten.</p></article>`;
+    selectors.watchlistPulse.innerHTML = `<article><strong>Starte mit 3 Assets</strong><p>Füge Werte hinzu, um Gewinner, Verlierer, Risiko, News Impact und offene Alerts als Watchlist Intelligence zu sehen.</p></article>`;
     return;
   }
   const quoted = saved.map((asset) => state.quoteCache.get(asset.symbol) || { asset, changePct: null }).sort((a, b) => Math.abs(b.changePct || 0) - Math.abs(a.changePct || 0));
-  selectors.watchlistPulse.innerHTML = quoted.slice(0, 4).map((quote) => `<article><strong>${quote.asset.name}</strong><p>${formatPercent(quote.changePct)} · ${quote.asset.risk} · ${state.alerts[quote.asset.symbol] ? "Alarm aktiv" : "kein Alarm"}</p></article>`).join("");
+  const highestRisk = saved.sort((a, b) => ["Niedrig", "Mittel", "Hoch", "Sehr hoch"].indexOf(b.risk) - ["Niedrig", "Mittel", "Hoch", "Sehr hoch"].indexOf(a.risk))[0];
+  selectors.watchlistPulse.innerHTML = [
+    `<article><strong>Stärkster Impuls</strong><p>${quoted[0].asset.name}: ${formatPercent(quoted[0].changePct)} · ${quoted[0].asset.risk}</p></article>`,
+    `<article><strong>Höchstes Risiko</strong><p>${highestRisk.name}: ${highestRisk.risk} · ${assetSector(highestRisk)}</p></article>`,
+    `<article><strong>Offene Alerts</strong><p>${Object.keys(state.alerts).length + state.smartAlerts.length} aktiv · Preis, News oder Risiko prüfen</p></article>`,
+    ...quoted.slice(0, 3).map((quote) => `<article><strong>${quote.asset.name}</strong><p>${formatPercent(quote.changePct)} · ${quote.asset.risk} · ${state.alerts[quote.asset.symbol] ? "Alarm aktiv" : "kein Alarm"}</p></article>`)
+  ].join("");
 }
 
 function renderNewsImpactScanner() {
@@ -1688,7 +1765,7 @@ function renderNewsImpactScanner() {
     const score = card.dataset.newsRelevance === "high" ? 86 - index * 4 : 62 - index * 3;
     const assetsText = card.dataset.newsAssets || "Markt";
     const pro = state.isProUser ? `Watchlist-Impact: ${[...state.savedSymbols].some((symbol) => assetsText.includes(symbol)) ? "direkt betroffen" : "indirekt prüfen"}.` : "Pro zeigt Watchlist-Impact.";
-    return `<article class="impact-item"><strong>Impact ${score}/100</strong><small>${card.querySelector("h3")?.textContent || "News"}</small><p>Assets: ${assetsText}. ${pro}</p></article>`;
+    return `<article class="impact-item"><strong>Impact ${score}/100</strong><small>${card.querySelector("h3")?.textContent || "News"}</small><p>Direkt: ${assetsText}. Indirekt: ${card.dataset.newsType}. Warum relevant: mögliche Bewegung bei Risikoappetit, Sektor oder Liquidität. ${pro}</p></article>`;
   }).join("");
 }
 
@@ -1698,7 +1775,8 @@ function renderCompareBattle() {
   selectors.compareBattle.innerHTML = rows.map((asset) => {
     const quote = state.quoteCache.get(asset.symbol);
     const label = asset.type === "ETF" ? "breitere Streuung" : asset.risk === "Niedrig" ? "defensiver" : Math.abs(quote?.changePct || 0) > 2 ? "volatiler" : "ruhigeres Momentum";
-    return `<article><strong>${asset.name}</strong><small>${asset.symbol} · ${asset.type} · ${label}</small><p>${formatPercent(quote?.changePct)} · Risiko ${asset.risk} · ${mockFundamentals(asset).split("·")[0]}</p></article>`;
+    const score = Math.max(12, Math.min(96, 58 + (quote?.changePct || 0) * 6 - (asset.risk === "Sehr hoch" ? 12 : asset.risk === "Hoch" ? 6 : 0)));
+    return `<article><strong>${asset.name}</strong><small>${asset.symbol} · ${asset.type} · ${label}</small><p>${formatPercent(quote?.changePct)} · Risiko ${asset.risk} · ${mockFundamentals(asset).split("·")[0]}</p><div class="score-bar"><span style="width:${score}%"></span></div></article>`;
   }).join("");
 }
 
@@ -1707,7 +1785,45 @@ function renderSmartAlerts() {
     selectors.smartAlertsList.innerHTML = `<article><strong>Noch keine Smart Alerts</strong><p>Free: Preisalarme. Pro: Volatilität, News Impact und Trendabweichungen.</p></article>`;
     return;
   }
-  selectors.smartAlertsList.innerHTML = state.smartAlerts.map((alert, index) => `<article><strong>${alert.asset}</strong><p>${alert.type} · ${alert.created}</p><button type="button" data-delete-smart-alert="${index}">Löschen</button></article>`).join("");
+  selectors.smartAlertsList.innerHTML = state.smartAlerts.map((alert, index) => `<article><strong>${alert.asset}</strong><p>${alert.type} · ${alert.created}</p><small>Pro prüft Bewegung, News-Kontext, Risikoänderung und Watchlist-Bezug.</small><button type="button" data-delete-smart-alert="${index}">Löschen</button></article>`).join("");
+}
+
+function proDashboardHTML(action) {
+  const context = assistantContext();
+  const watchQuotes = context.watchlist.map((asset) => state.quoteCache.get(asset.symbol) || { asset, changePct: null }).sort((a, b) => Math.abs(b.changePct || 0) - Math.abs(a.changePct || 0));
+  const top = watchQuotes[0] || { asset: context.asset, changePct: context.quote?.changePct };
+  const weak = watchQuotes.at(-1) || top;
+  const smartCount = state.smartAlerts.length;
+  if (action === "watchlist") {
+    return `<span class="panel-label">Watchlist Intelligence</span><strong>${context.watchlist.length ? `${top.asset.name} ist am auffälligsten` : "Watchlist aufbauen"}</strong><p>Gewinner: ${top.asset.symbol} ${formatPercent(top.changePct)} · Schwächer: ${weak.asset.symbol} ${formatPercent(weak.changePct)} · Smart Alerts: ${smartCount}. ${context.watchlist.length ? "Pro priorisiert News, Risiko und offene Alerts." : "Füge Werte hinzu, damit Pro dein tägliches Pulse-Briefing erstellt."}</p>`;
+  }
+  if (action === "deep") {
+    return `<span class="panel-label">Deep Asset Analysis</span><strong>${context.asset.name} Deep Dive</strong><p>${proDeepDive(context.asset, context)} Confidence: ${confidenceScore(context)}. Basis: Kursdaten, Volatilität, Asset-Typ, Watchlist-Kontext, News-Demo und Quelle ${context.dataHealth}.</p>`;
+  }
+  if (action === "news") {
+    const news = context.newsItems[0];
+    return `<span class="panel-label">News Impact Pro</span><strong>${news?.title || "News Impact wird geprüft"}</strong><p>Direkt betroffen: ${news?.assets || context.asset.symbol}. Indirekt relevant: ${assetSector(context.asset)}. Pro zeigt mögliche Chancen, Risiken und Beobachtungspunkte für deine Watchlist.</p>`;
+  }
+  if (action === "compare") {
+    const pair = (context.compareList.length ? context.compareList : [context.asset, assets.find((asset) => asset.symbol === "NVDA")]).filter(Boolean).slice(0, 2);
+    return `<span class="panel-label">Compare Battle Pro</span><strong>${pair.map((asset) => asset.symbol).join(" vs ")}</strong><p>${pair.map((asset) => `${asset.symbol}: Risiko ${asset.risk}, ${sentimentFromChange(state.quoteCache.get(asset.symbol)?.changePct)}, ${assetSector(asset)}`).join(" · ")}. Pro ergänzt Momentum-, Defensive- und Datenqualitäts-Scores.</p>`;
+  }
+  if (action === "report") {
+    return `<span class="panel-label">Reports & Export</span><strong>Report vorbereitet</strong><p>Assets: ${[context.asset, ...context.watchlist.slice(0, 4)].map((asset) => asset.symbol).join(", ")}. Zeitraum: ${context.activeTimeframe}. AI-Fazit, Risiken, News Impact und Datenqualität wurden als Demo-Report zusammengestellt.</p><button class="secondary-action" type="button" data-report-export>Als PDF exportieren</button>`;
+  }
+  return `<span class="panel-label">AI Assistant Pro</span><strong>Kontextanalyse bereit</strong><p>${generateAssistantResponse("Generiere mein Tagesbriefing", context).replace(/\n/g, "<br>")}</p>`;
+}
+
+function runProDashboardAction(action) {
+  if (!state.isProUser) {
+    openModal("pro", state.activeAsset, {
+      feature: "Pro Dashboard",
+      benefit: "Das Pro Dashboard verbindet AI Assistant, Watchlist Intelligence, Smart Alerts, News Impact, Deep Asset Analysis und Reports in einer Arbeitsfläche."
+    });
+    return;
+  }
+  selectors.proDashboardOutput.innerHTML = proDashboardHTML(action);
+  showToast("Pro-Modul aktualisiert.");
 }
 
 function learningCopy(term) {
@@ -1722,29 +1838,154 @@ function learningCopy(term) {
   return state.isProUser ? `${base} Beispiel zu ${state.activeAsset.name}: Risiko ${state.activeAsset.risk}, Asset-Typ ${state.activeAsset.type}.` : `${base} Pro ergänzt Beispiele zum aktiven Asset.`;
 }
 
-function assistantAnswer(question) {
+function escapeHTML(value) {
+  return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
+}
+
+function assistantContext() {
   const asset = state.activeAsset;
   const quote = state.quoteCache.get(asset.symbol);
+  const chart = state.chartCache.get(`${asset.symbol}:${state.activeRange}`);
   const watchlist = [...state.savedSymbols].map((symbol) => assets.find((item) => item.symbol === symbol)).filter(Boolean);
-  const compared = [...state.compareSymbols].map((symbol) => assets.find((item) => item.symbol === symbol)).filter(Boolean);
-  const base = `${asset.name} (${asset.symbol}) ist aktiv. Zeitraum ${rangeLabel(state.activeRange)}, Bewegung ${formatPercent(quote?.changePct)}, Risiko ${asset.risk}, Quelle ${healthLabel(quote?.health)}.`;
-  const lower = question.toLowerCase();
-  if (lower.includes("vergleich") || lower.includes("compare") || lower.includes("vs")) {
-    const pair = compared.length ? compared : [asset, assets.find((item) => item.symbol === "NVDA")].filter(Boolean);
-    return `Neutraler Vergleich: ${pair.map((item) => item.name).join(" vs ")}. ${pair.map((item) => `${item.symbol}: ${item.type}, Risiko ${item.risk}, ${sentimentFromChange(state.quoteCache.get(item.symbol)?.changePct)}`).join(" · ")}. Pro ordnet zusätzlich Watchlist- und News-Impact ein. Keine Anlageberatung.`;
+  const compareList = [...state.compareSymbols].map((symbol) => assets.find((item) => item.symbol === symbol)).filter(Boolean);
+  const newsItems = [...document.querySelectorAll(".news-card")].map((card) => ({
+    title: card.querySelector("h3")?.textContent || "News",
+    assets: card.dataset.newsAssets || "",
+    relevance: card.dataset.newsRelevance || "medium",
+    type: card.dataset.newsType || "Markt"
+  }));
+  return {
+    asset,
+    quote,
+    chart,
+    watchlist,
+    compareList,
+    newsItems,
+    activeTimeframe: rangeLabel(state.activeRange),
+    chartPerformance: chart?.series ? periodChange(chart.series, getRangeConfig(state.activeRange).days) : quote?.changePct,
+    sentiment: sentimentFromChange(quote?.changePct),
+    dataHealth: healthLabel(quote?.health),
+    isProUser: state.isProUser
+  };
+}
+
+function findAssetsInMessage(message) {
+  const lower = message.toLowerCase();
+  return assets.filter((asset) =>
+    lower.includes(asset.symbol.toLowerCase()) ||
+    lower.includes(asset.name.toLowerCase()) ||
+    asset.name.toLowerCase().split(" ").some((part) => part.length > 4 && lower.includes(part))
+  ).slice(0, 4);
+}
+
+function confidenceScore(context) {
+  if (context.quote?.health === "live") return "Hoch";
+  if (context.quote?.health === "delayed" || context.quote?.health === "cache") return "Mittel";
+  return "Niedrig";
+}
+
+function proDeepDive(asset, context) {
+  if (asset.type === "ETF") {
+    return `ETF-Fokus: Kosten/TER, Indexbreite, Regionen, Sektoren, Replikation und Tracking-Risiko prüfen. ${asset.name} wirkt als ${asset.region}-Baustein; relevante Vergleichswerte sind ähnliche globale oder sektorale ETFs.`;
   }
+  if (asset.type === "Krypto") {
+    return `Krypto-Fokus: Volatilität, Liquidität, Volume, ATH-Distanz, Trendstatus und Sentiment sind wichtiger als klassische Fundamentaldaten. Bei ${asset.name} ist schnelles Risikomanagement zentral.`;
+  }
+  return `Aktien-Fokus: Bewertung, Momentum, Volatilität, Sektorvergleich, Earnings-Kontext, News Impact und ähnliche Aktien prüfen. ${assetSector(asset)} ist der wichtigste Vergleichsrahmen.`;
+}
+
+function formatAssistantSections(sections) {
+  return sections.map(([title, body]) => `${title}: ${body}`).join("\n\n");
+}
+
+function generateAssistantResponse(message, context = assistantContext()) {
+  const lower = message.toLowerCase();
+  const mentioned = findAssetsInMessage(message);
+  const active = mentioned[0] || context.asset;
+  const quote = state.quoteCache.get(active.symbol) || context.quote;
+  const movement = formatPercent(quote?.changePct);
+  const relevantNews = context.newsItems.filter((item) => item.assets.includes(active.symbol) || item.type.includes(active.type)).slice(0, 2);
+  const proLine = context.isProUser
+    ? `Pro-Kontext aktiv: Watchlist (${context.watchlist.length}), Compare (${context.compareList.length}), Alerts (${Object.keys(state.alerts).length + state.smartAlerts.length}), News Impact und Datenqualität werden einbezogen.`
+    : "Free-Kontext: kurze Basisantwort. Pro ergänzt Watchlist-Kontext, News Impact, Deep Dive, Compare und Reports.";
+
   if (lower.includes("watchlist")) {
-    if (!watchlist.length) return "Deine Watchlist ist noch leer. Füge 3 Werte hinzu, dann kann ich Pulse, auffällige Bewegungen, News und Alarme zusammenfassen. Keine Anlageberatung.";
-    return `Watchlist-Check: ${watchlist.slice(0, 5).map((item) => `${item.name} ${formatPercent(state.quoteCache.get(item.symbol)?.changePct)}`).join(", ")}. Auffällig sind Werte mit hoher Bewegung oder aktivem Alarm. Keine Anlageberatung.`;
+    if (!context.watchlist.length) {
+      return formatAssistantSections([
+        ["Kurzfazit", "Deine Watchlist ist noch leer. Füge zuerst 3 bis 5 Werte hinzu, damit ich Bewegungen, Risiko und News sinnvoll priorisieren kann."],
+        ["Nächster Schritt", "Öffne die Market-Matrix und speichere Werte über „Zur Watchlist“."],
+        ["Hinweis", "Keine Anlageberatung."]
+      ]);
+    }
+    const quoted = context.watchlist.map((asset) => state.quoteCache.get(asset.symbol) || { asset, changePct: null }).sort((a, b) => Math.abs(b.changePct || 0) - Math.abs(a.changePct || 0));
+    return formatAssistantSections([
+      ["Kurzfazit", `${quoted[0].asset.name} ist aktuell am auffälligsten (${formatPercent(quoted[0].changePct)}). ${quoted.at(-1).asset.name} wirkt im Vergleich ruhiger oder schwächer.`],
+      ["Was die Daten zeigen", quoted.slice(0, context.isProUser ? 6 : 3).map((item) => `${item.asset.symbol}: ${formatPercent(item.changePct)} · Risiko ${item.asset.risk}`).join(" · ")],
+      ["Worauf achten", context.isProUser ? "Prüfe offene Alerts, News Impact und Werte mit hoher Bewegung zuerst." : "Free zeigt nur die Kurzsicht. Pro priorisiert News, Alerts und Risiko automatisch."],
+      ["Hinweis", "Keine Anlageberatung."]
+    ]);
   }
-  if (lower.includes("risiko")) {
-    return `Risiko-Erklärung: ${base} Bei ${asset.type} zählen besonders ${asset.type === "Krypto" ? "Liquidität, Momentum und schnelle Sentimentwechsel" : asset.type === "ETF" ? "Indexkonzentration, Kosten und Makroumfeld" : "Sektortrend, Bewertung und Unternehmensnews"}. Keine Empfehlung.`;
+
+  if (lower.includes("vergleich") || lower.includes("compare") || lower.includes(" vs ") || mentioned.length >= 2) {
+    const pair = (mentioned.length >= 2 ? mentioned : context.compareList.length >= 2 ? context.compareList : [active, assets.find((asset) => asset.symbol === "NVDA")]).filter(Boolean).slice(0, 4);
+    return formatAssistantSections([
+      ["Kurzfazit", `${pair.map((asset) => asset.name).join(" vs ")} unterscheiden sich vor allem nach Risiko, Asset-Typ, Momentum und Datenqualität.`],
+      ["Vergleich", pair.map((asset) => {
+        const itemQuote = state.quoteCache.get(asset.symbol);
+        return `${asset.symbol}: ${asset.type}, ${assetSector(asset)}, Risiko ${asset.risk}, Bewegung ${formatPercent(itemQuote?.changePct)}, AI ${sentimentFromChange(itemQuote?.changePct)}`;
+      }).join(" · ")],
+      ["Pro-Einordnung", context.isProUser ? "Pro bewertet zusätzlich defensive Wirkung, Volatilität, Watchlist-Rolle und News Impact." : "Pro schaltet Compare Battle mit Score-Cards und AI-Zusammenfassung frei."],
+      ["Hinweis", "Kein Gewinner-Ranking und keine Kauf-/Verkaufsempfehlung."]
+    ]);
   }
-  return `Markt-Erklärung: ${base} Die Bewegung sollte mit Hoch/Tief, Volumen, News-Kontext und ähnlichen Assets geprüft werden. ${state.isProUser ? "Pro-Kontext: Watchlist, Alerts und News Impact wurden berücksichtigt." : "Free-Kontext: Basisantwort. Pro schaltet Watchlist- und News-Analyse frei."} Keine Anlageberatung.`;
+
+  if (["risiko", "volatil", "drawdown", "gefahr"].some((word) => lower.includes(word))) {
+    return formatAssistantSections([
+      ["Kurzfazit", `${active.name} hat Risiko-Level ${active.risk}. Die aktuelle Bewegung beträgt ${movement}.`],
+      ["Mögliche Risikotreiber", active.type === "Krypto" ? "Liquidität, Sentimentwechsel, starke Intraday-Bewegungen und regulatorische Nachrichten." : active.type === "ETF" ? "Indexkonzentration, Zinsen, Währung, Sektorlastigkeit und Tracking-Differenz." : "Bewertung, Earnings, Sektorrotation, News und Gesamtmarkt."],
+      ["Datenqualität", `${confidenceScore(context)} · Quelle ${healthLabel(quote?.health)} · Zeitraum ${context.activeTimeframe}.`],
+      ["Hinweis", "Keine Anlageberatung."]
+    ]);
+  }
+
+  if (["news", "nachricht", "impact", "ereignis"].some((word) => lower.includes(word))) {
+    return formatAssistantSections([
+      ["Kurzfazit", relevantNews.length ? `${relevantNews[0].title} ist für ${active.name} möglicherweise relevant.` : `Für ${active.name} gibt es in der Demo keinen direkten News-Treffer; indirekte Marktimpulse bleiben möglich.`],
+      ["News Impact", relevantNews.length ? relevantNews.map((item) => `${item.relevance === "high" ? "Hoher" : "Mittlerer"} Impact · ${item.assets}`).join(" · ") : "Pro würde Watchlist- und Sektorbezug genauer prüfen."],
+      ["Worauf achten", "Reaktion im Kurs, Volumen, ähnliche Assets und ob die Nachricht nur kurzfristiges Sentiment oder fundamentalen Kontext betrifft."],
+      ["Hinweis", "Keine Anlageberatung."]
+    ]);
+  }
+
+  if (["ter", "index", "ausschütt", "replikation", "etf"].some((word) => lower.includes(word))) {
+    return formatAssistantSections([
+      ["Kurzfazit", "ETF-Kennzahlen helfen zu verstehen, ob ein Fonds günstig, breit gestreut und passend zum gewünschten Markt ist."],
+      ["TER", "TER sind laufende jährliche Kosten. Niedriger ist gut, aber Index, Tracking und Diversifikation sind ebenfalls wichtig."],
+      ["Pro-Kontext", active.type === "ETF" ? proDeepDive(active, context) : "Bei ETFs prüft Pro Kosten, Index, Regionen, Sektoren, Replikation und ähnliche ETFs."],
+      ["Hinweis", "Keine Anlageberatung."]
+    ]);
+  }
+
+  if (["bitcoin", "ethereum", "altcoin", "ath", "supply", "krypto"].some((word) => lower.includes(word))) {
+    return formatAssistantSections([
+      ["Kurzfazit", `${active.name} wird im Krypto-Kontext vor allem über Momentum, Liquidität, Volatilität und Sentiment eingeordnet.`],
+      ["Was die Daten zeigen", `Aktueller Zeitraum ${context.activeTimeframe}, Bewegung ${movement}, Risiko ${active.risk}, Datenstatus ${healthLabel(quote?.health)}.`],
+      ["Worauf achten", "ATH-Distanz, Volumen, große Marktbewegungen, News Impact und schnelle Gegenbewegungen."],
+      ["Hinweis", "Keine Anlageberatung."]
+    ]);
+  }
+
+  return formatAssistantSections([
+    ["Kurzfazit", `${active.name} (${active.symbol}) ist im Fokus. Bewegung ${movement}, Risiko ${active.risk}, AI-Sentiment ${sentimentFromChange(quote?.changePct)}.`],
+    ["Was die Daten zeigen", `${active.type} · ${assetSector(active)} · Zeitraum ${context.activeTimeframe} · Datenqualität ${confidenceScore(context)}.`],
+    ["Mögliche Gründe", relevantNews.length ? `News-Kontext: ${relevantNews.map((item) => item.title).join(" · ")}.` : "Mögliche Treiber sind Marktstimmung, Sektorbewegung, Volatilität und Datenqualität."],
+    ["Pro-Kontext", proLine],
+    ["Hinweis", "Keine Anlageberatung."]
+  ]);
 }
 
 function renderAssistantMessages() {
-  selectors.assistantMessages.innerHTML = state.assistantMessages.map((message) => `<div class="assistant-message ${message.role}"><strong>${message.role === "user" ? "Du" : "AI"}</strong><p>${message.text}</p></div>`).join("") || `<div class="assistant-message"><strong>AI</strong><p>Frag mich nach Bewegungen, Risiken, Watchlist oder Vergleichen. Ich nutze den aktuellen Website-Kontext.</p></div>`;
+  selectors.assistantMessages.innerHTML = state.assistantMessages.map((message) => `<div class="assistant-message ${message.role}"><strong>${message.role === "user" ? "Du" : "Nexus AI"}</strong><p>${escapeHTML(message.text).replace(/\n/g, "<br>")}</p></div>`).join("") || `<div class="assistant-message"><strong>Nexus AI</strong><p>Frag mich nach Bewegungen, Risiken, Watchlist, News, ETFs, Krypto oder Vergleichen. Ich nutze den aktuellen Website-Kontext.</p></div>`;
   selectors.assistantMessages.scrollTop = selectors.assistantMessages.scrollHeight;
 }
 
@@ -1757,9 +1998,15 @@ function askAssistant(question) {
   }
   if (!state.isProUser) state.assistantDaily[key] = (state.assistantDaily[key] || 0) + 1;
   state.assistantMessages.push({ role: "user", text: question });
-  state.assistantMessages.push({ role: "ai", text: assistantAnswer(question) });
-  saveAssistant();
+  state.assistantMessages.push({ role: "ai", text: "Nexus AI analysiert Kontext, Watchlist, News und Datenqualität..." });
   renderAssistantMessages();
+  window.setTimeout(() => {
+    state.assistantMessages[state.assistantMessages.length - 1] = { role: "ai", text: generateAssistantResponse(question) };
+    saveAssistant();
+    renderAssistantMessages();
+    updateProUI();
+  }, 420);
+  saveAssistant();
   updateProUI();
 }
 
@@ -2037,8 +2284,14 @@ document.querySelector("#dashboardWidgets").addEventListener("click", (event) =>
   showToast("Dashboard-Widget geöffnet.");
 });
 
-document.querySelector(".quick-actions").addEventListener("click", (event) => {
-  const action = event.target.closest("[data-quick-action]")?.dataset.quickAction;
+selectors.retentionGrid?.addEventListener("click", (event) => {
+  const widget = event.target.closest("[data-widget-target]");
+  if (!widget) return;
+  document.querySelector(widget.dataset.widgetTarget)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  showToast("Persönliches Cockpit geöffnet.");
+});
+
+function handleQuickAction(action) {
   if (!action) return;
   if (action === "search") {
     document.querySelector("#markets").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -2055,6 +2308,13 @@ document.querySelector(".quick-actions").addEventListener("click", (event) => {
     }, 700);
   }
   if (action === "news") document.querySelector("#news").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+document.querySelectorAll(".quick-actions, .hero-cockpit-grid, .onboarding-steps").forEach((area) => {
+  area.addEventListener("click", (event) => {
+    const action = event.target.closest("[data-quick-action]")?.dataset.quickAction;
+    handleQuickAction(action);
+  });
 });
 
 selectors.dataSourceButton.addEventListener("click", () => {
@@ -2068,6 +2328,11 @@ selectors.drawerClose.addEventListener("click", () => {
 selectors.modalClose.addEventListener("click", closeModal);
 selectors.modalCancel.addEventListener("click", closeModal);
 selectors.modal.addEventListener("click", (event) => {
+  if (event.target.closest("[data-open-access-from-modal]")) {
+    closeModal();
+    openAccessModal();
+    return;
+  }
   if (event.target === selectors.modal) closeModal();
 });
 
@@ -2137,8 +2402,12 @@ document.querySelector("#briefing").addEventListener("click", (event) => {
 document.querySelectorAll(".plan-button").forEach((button) => {
   button.addEventListener("click", () => {
     if (button.dataset.plan === "Pro") {
-      selectors.accessModal.hidden = false;
-      selectors.accessCodeInput.focus();
+      if (state.isProUser) {
+        document.querySelector("#proDashboard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        runProDashboardAction("assistant");
+      } else {
+        openAccessModal();
+      }
     } else {
       showToast(`${button.dataset.plan}: Zugang wird vorbereitet. Payment ist in dieser Demo noch nicht aktiv.`);
     }
@@ -2149,6 +2418,9 @@ function openAccessModal() {
   selectors.accessModal.hidden = false;
   selectors.accessCodeMessage.textContent = "";
   selectors.accessCodeInput.value = "";
+  selectors.accessCodeInput.type = "password";
+  selectors.toggleAccessCode.textContent = "Anzeigen";
+  selectors.toggleAccessCode.setAttribute("aria-pressed", "false");
   selectors.accessCodeInput.focus();
 }
 
@@ -2160,6 +2432,12 @@ selectors.accessCodeButton.addEventListener("click", openAccessModal);
 selectors.openAccessModal.addEventListener("click", openAccessModal);
 selectors.accessClose.addEventListener("click", closeAccessModal);
 selectors.accessCancel.addEventListener("click", closeAccessModal);
+selectors.toggleAccessCode.addEventListener("click", () => {
+  const visible = selectors.accessCodeInput.type === "text";
+  selectors.accessCodeInput.type = visible ? "password" : "text";
+  selectors.toggleAccessCode.textContent = visible ? "Anzeigen" : "Verbergen";
+  selectors.toggleAccessCode.setAttribute("aria-pressed", String(!visible));
+});
 selectors.accessModal.addEventListener("click", (event) => {
   if (event.target === selectors.accessModal) closeAccessModal();
 });
@@ -2169,6 +2447,8 @@ async function redeemAccessCode() {
     state.isProUser = true;
     saveProState();
     updateProUI();
+    document.body.classList.add("pro-just-activated");
+    window.setTimeout(() => document.body.classList.remove("pro-just-activated"), 1600);
     closeAccessModal();
     showToast("Pro-Zugang aktiviert.");
     renderPremiumModules();
@@ -2191,6 +2471,27 @@ selectors.accessCodeInput.addEventListener("keydown", (event) => {
 });
 selectors.resetDemoAccess.addEventListener("click", resetDemoAccess);
 selectors.resetDemoAccessLegal.addEventListener("click", resetDemoAccess);
+selectors.openProDashboard?.addEventListener("click", () => {
+  if (!state.isProUser) {
+    openAccessModal();
+    showToast("Pro Dashboard mit Nexus Code freischalten.");
+    return;
+  }
+  runProDashboardAction("assistant");
+});
+selectors.proDashboard?.addEventListener("click", (event) => {
+  const action = event.target.closest("[data-pro-dashboard-action]")?.dataset.proDashboardAction;
+  if (action) runProDashboardAction(action);
+  if (event.target.closest("[data-report-export]")) showToast("Export vorbereitet. PDF-Export ist in dieser Demo simuliert.");
+});
+
+selectors.premiumGrid?.addEventListener("click", (event) => {
+  if (state.isProUser) return;
+  const card = event.target.closest(".premium-card.requires-pro");
+  if (!card || event.target.closest("select")) return;
+  openAccessModal();
+  showToast(`${card.dataset.featureCard || "Pro"} mit Nexus Code freischalten.`);
+});
 
 selectors.assistantFab.addEventListener("click", () => {
   selectors.assistantDrawer.hidden = false;
@@ -2210,6 +2511,12 @@ selectors.assistantForm.addEventListener("submit", (event) => {
   if (!question) return;
   selectors.assistantInput.value = "";
   askAssistant(question);
+});
+selectors.assistantInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    selectors.assistantForm.requestSubmit();
+  }
 });
 
 selectors.radarTabs.addEventListener("click", (event) => {
@@ -2258,7 +2565,17 @@ selectors.generatePremiumBriefing.addEventListener("click", () => {
   const scope = selectors.briefingScope.value;
   selectors.generatedBriefing.innerHTML = `<article><strong>Briefing wird generiert...</strong><p>Scope: ${scope}</p></article>`;
   window.setTimeout(() => {
-    selectors.generatedBriefing.innerHTML = `<article><strong>Kurzfazit</strong><p>${scope}: Marktstimmung ${document.querySelector("#widgetSentiment").textContent}. Top Bewegung ${document.querySelector("#widgetTopMover").textContent}. Risiken: ${document.querySelector("#widgetRisk").textContent}. Worauf achten: News, Volumen, aktive Alarme und Datenqualität. Keine Anlageberatung.</p></article>`;
+    const context = assistantContext();
+    const top = cachedQuotes().sort((a, b) => Math.abs(b.changePct || 0) - Math.abs(a.changePct || 0))[0];
+    selectors.generatedBriefing.innerHTML = `
+      <article>
+        <strong>${new Date().toLocaleString("de-DE")}: Pro Briefing</strong>
+        <p><b>Kurzfazit:</b> ${scope}: Marktstimmung ${document.querySelector("#widgetSentiment").textContent}. Top Bewegung ${top ? `${top.asset.name} ${formatPercent(top.changePct)}` : document.querySelector("#widgetTopMover").textContent}.</p>
+        <p><b>Watchlist-Hinweise:</b> ${context.watchlist.length ? context.watchlist.slice(0, 5).map((asset) => asset.symbol).join(", ") : "Noch keine Watchlist. Werte hinzufügen, um persönliche Signale zu erhalten."}</p>
+        <p><b>Risiken:</b> ${document.querySelector("#widgetRisk").textContent}. Prüfe Volatilität, News Impact, offene Alerts und Datenqualität.</p>
+        <p><b>News Impact:</b> ${context.newsItems.slice(0, 2).map((item) => item.title).join(" · ")}.</p>
+        <p><b>Datenqualität:</b> ${confidenceScore(context)} · ${context.dataHealth}. Keine Anlageberatung.</p>
+      </article>`;
   }, 700);
 });
 selectors.learningLayer.addEventListener("click", (event) => {
@@ -2323,6 +2640,7 @@ window.addEventListener("resize", () => {
 });
 
 setStatus("Marktdaten werden geladen", "loading");
+bootInterfaceEffects();
 setupActiveNavigation();
 setDetailTab("overview", true);
 renderAssets();

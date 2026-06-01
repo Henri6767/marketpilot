@@ -27,6 +27,7 @@
       </nav>
       <div class="topbar-actions">
         <button class="data-status-pill" id="dataSourceButton" type="button">Daten: Live/Demo</button>
+        <span class="nav-pro-status" id="navProStatus">Free</span>
         <button class="access-pill" id="accessCodeButton" type="button">Nexus Code</button>
         <a class="login-link" href="#legal">Login</a>
         <a class="topbar-action" href="#pricing">Kostenlos starten</a>
@@ -40,10 +41,10 @@
         <div class="hero-grid" aria-hidden="true"></div>
 
         <div class="hero-content">
-          <p class="eyebrow">AI-Marktbriefing statt Finanzlärm</p>
-          <h1>Dein tägliches AI-Marktbriefing für Aktien, ETFs und Krypto.</h1>
+          <p class="eyebrow hero-kicker"><span aria-hidden="true"></span>AI-Finance-Cockpit 2026</p>
+          <h1>Dein <span class="gradient-text">AI-Finance-Cockpit</span> für Märkte, Watchlists und smarte Marktbriefings.</h1>
           <p class="hero-copy">
-            MarketPilot Nexus ordnet Kurse, Marktbewegungen, News, Risiken und mögliche Chancen verständlich ein. Schnell, nachvollziehbar und ohne persönliche Anlageberatung.
+            Aktien, ETFs, Krypto, News, Risiken und Watchlist-Bewegungen werden in ein klares tägliches Briefing übersetzt. Schnell, datenreich und ohne persönliche Anlageberatung.
           </p>
           <div class="hero-actions">
             <a class="primary-action" href="#briefing">Dashboard öffnen</a>
@@ -58,27 +59,76 @@
             <button type="button" data-quick-action="news">News Impact prüfen</button>
           </div>
           <div class="trust-row" aria-label="Plattform-Schwerpunkte">
-            <span>Täglicher Report</span>
-            <span>Persönliche Watchlist</span>
-            <span>Risiko- und Chancenbewertung</span>
-            <span>Live, verzögert oder Demo</span>
+            <span>AI Briefing</span>
+            <span>Watchlist Pulse</span>
+            <span>Smart Alerts</span>
+            <span>News Impact</span>
+            <span>Keine Anlageberatung</span>
+            <span>Live/Demo-Daten</span>
           </div>
         </div>
 
-        <aside class="hero-panel" aria-label="Live-Datenstatus">
-          <div class="status-line">
-            <span class="signal" id="liveSignal" aria-hidden="true"></span>
-            <span id="dataStatus">Datenstatus wird geprüft</span>
+        <aside class="hero-panel cockpit-preview" aria-label="Live-Datenstatus">
+          <div class="cockpit-orbit-layer" aria-hidden="true">
+            <span></span><span></span><span></span>
           </div>
-          <div class="hero-metric">
-            <span class="panel-label">Aktueller Fokus</span>
-            <strong id="heroAsset">Bitcoin</strong>
+          <div class="cockpit-topline">
+            <div class="status-line">
+              <span class="signal" id="liveSignal" aria-hidden="true"></span>
+              <span id="dataStatus">Datenstatus wird geprüft</span>
+            </div>
+            <span class="cockpit-badge">Nexus OS</span>
           </div>
-          <canvas class="mini-chart" id="heroChart" width="330" height="110" aria-label="Mini-Kurschart"></canvas>
-          <div class="panel-grid">
-            <span>Kurs <b id="heroPrice">Wird geladen</b></span>
-            <span>Trend <b id="heroTrend">Wird geladen</b></span>
-            <span>Quelle <b id="heroSource">Wird geprüft</b></span>
+          <div class="cockpit-stack">
+            <div class="hero-metric cockpit-main-card">
+              <span class="panel-label">Aktueller Fokus</span>
+              <strong id="heroAsset">Bitcoin</strong>
+              <canvas class="mini-chart" id="heroChart" width="330" height="110" aria-label="Mini-Kurschart"></canvas>
+              <div class="panel-grid">
+                <span>Kurs <b id="heroPrice">Wird geladen</b></span>
+                <span>Trend <b id="heroTrend">Wird geladen</b></span>
+                <span>Quelle <b id="heroSource">Wird geprüft</b></span>
+              </div>
+            </div>
+            <div class="ai-insight-card cockpit-float-card">
+              <span class="panel-label">AI Insight</span>
+              <strong id="heroInsight">Neutral</strong>
+              <p>Signalstärke, Datenqualität und Risiko werden laufend eingeordnet.</p>
+            </div>
+          </div>
+          <div class="cockpit-visual-grid">
+            <div class="mini-heatmap" aria-label="Mini Heatmap">
+              <span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <div class="risk-orbit" aria-label="Risk Radar">
+              <i></i><i></i><i></i>
+            </div>
+            <div class="performance-chips">
+              <span>BTC +</span>
+              <span>NVDA +</span>
+              <span>ETF</span>
+            </div>
+          </div>
+          <div class="hero-cockpit-grid" aria-label="Market Cockpit Vorschau">
+            <button type="button" data-quick-action="briefing">
+              <span>Heute wichtig</span>
+              <strong id="heroToday">Briefing lädt</strong>
+            </button>
+            <button type="button" data-quick-action="watchlist">
+              <span>Watchlist Pulse</span>
+              <strong id="heroPulse">0 Assets</strong>
+            </button>
+            <button type="button" data-quick-action="news">
+              <span>News Impact</span>
+              <strong>3 Signale</strong>
+            </button>
+            <button type="button" data-quick-action="alert">
+              <span>AI Insight</span>
+              <strong>Risiko Radar</strong>
+            </button>
+          </div>
+          <div class="hero-signal-rail" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span>
           </div>
         </aside>
       </section>
@@ -100,6 +150,28 @@
             <strong id="todayRecent">Bitcoin</strong>
             <p id="todayRecentReason">Deine zuletzt geöffneten Assets bleiben hier griffbereit.</p>
           </article>
+        </div>
+        <div class="retention-grid" aria-label="Persönliches Cockpit">
+          <button type="button" data-widget-target="#briefing">
+            <span class="panel-label">Seit deinem letzten Besuch</span>
+            <strong id="retentionVisit">Briefing wird vorbereitet</strong>
+            <p>Neue Bewegungen, Datenstatus und Watchlist-Signale werden priorisiert.</p>
+          </button>
+          <button type="button" data-widget-target="#watchlist">
+            <span class="panel-label">Watchlist braucht Aufmerksamkeit</span>
+            <strong id="retentionWatchlist">Noch keine Watchlist</strong>
+            <p>Persönliche Pulse-Checks machen tägliche Rückkehr sinnvoll.</p>
+          </button>
+          <button type="button" data-widget-target="#alerts">
+            <span class="panel-label">Aktive Smart Alerts</span>
+            <strong id="retentionAlerts">0 aktiv</strong>
+            <p>Preis-, Risiko- und News-Trigger bleiben lokal sichtbar.</p>
+          </button>
+          <button type="button" data-widget-target="#news">
+            <span class="panel-label">Neue relevante News</span>
+            <strong>3 Impact-Signale</strong>
+            <p>News werden nach Relevanz, Assetklasse und Watchlist-Kontext eingeordnet.</p>
+          </button>
         </div>
         <div class="dashboard-widgets" id="dashboardWidgets">
           <button class="dashboard-widget" type="button" data-widget-target="#briefing">
@@ -166,6 +238,31 @@
           <strong>Wird geladen</strong>
           <small>Live-Daten werden angefragt</small>
         </article>
+      </section>
+
+      <section class="onboarding-section" aria-label="Start in drei Schritten">
+        <div class="section-heading compact">
+          <p class="eyebrow">Start in 3 Schritten</p>
+          <h2>Vom Marktchaos zum täglichen Cockpit</h2>
+          <p>Wähle Assets, baue deine Watchlist und lass dir ein AI-Briefing aus Marktbewegungen, News und Risiken erstellen.</p>
+        </div>
+        <div class="onboarding-steps">
+          <button type="button" data-quick-action="search">
+            <span>01</span>
+            <strong>Assets auswählen</strong>
+            <p>Krypto, Aktien und ETFs in der Market-Matrix filtern.</p>
+          </button>
+          <button type="button" data-quick-action="watchlist">
+            <span>02</span>
+            <strong>Watchlist bauen</strong>
+            <p>Werte speichern und Bewegungen täglich prüfen.</p>
+          </button>
+          <button type="button" data-quick-action="briefing">
+            <span>03</span>
+            <strong>AI Briefing erhalten</strong>
+            <p>Relevante Chancen, Risiken und News kompakt lesen.</p>
+          </button>
+        </div>
       </section>
 
       <section class="briefing-band" id="briefing">
@@ -607,13 +704,20 @@
         <div class="section-heading">
           <p class="eyebrow">Premium Cockpit</p>
           <h2>AI-gestützte Marktmodule, die Pro spürbar wertvoll machen</h2>
-          <p>Alle Module reagieren im Frontend auf dein aktives Asset, Watchlist, Alerts, News und Vergleichswerte. Pro wird per Nexus Code lokal freigeschaltet.</p>
+          <p>Pro macht aus Marktdaten persönliche Marktintelligenz: Assistant, Radar, Watchlist Pulse, Smart Alerts und Briefings reagieren auf dein aktives Asset, News, Alerts und Vergleichswerte.</p>
         </div>
         <div class="premium-status">
           <div>
             <span class="panel-label">Access</span>
             <strong id="proStatusLabel">Free</strong>
             <p id="proStatusText">3 AI-Fragen pro Tag, Basis-Insights und eingeschränkte Premium-Module.</p>
+            <div class="premium-benefits" aria-label="Pro Vorteile">
+              <span>Unbegrenzter AI Assistant</span>
+              <span>Watchlist Intelligence</span>
+              <span>Smart Alerts für News & Risiko</span>
+              <span>Deep Asset Analysis</span>
+              <span>Reports & Export Preview</span>
+            </div>
           </div>
           <div class="access-actions">
             <button class="primary-action" id="openAccessModal" type="button">Nexus Code einlösen</button>
@@ -621,9 +725,13 @@
           </div>
         </div>
         <div class="premium-grid">
-          <article class="premium-card radar-card">
+          <article class="premium-card radar-card" data-feature-card="Market Radar">
             <div class="card-headline">
-              <span class="panel-label">Market Radar</span>
+              <span class="feature-icon" aria-hidden="true">R</span>
+              <div>
+                <span class="panel-label">Market Radar</span>
+                <h3>Risiko, Momentum und Relevanz auf einen Blick</h3>
+              </div>
               <span class="pro-badge">Live Demo</span>
             </div>
             <div class="radar-tabs" id="radarTabs">
@@ -635,39 +743,59 @@
             </div>
             <div class="market-radar" id="marketRadar" aria-label="Market Radar"></div>
           </article>
-          <article class="premium-card">
+          <article class="premium-card" data-feature-card="Risk Map">
             <div class="card-headline">
-              <span class="panel-label">AI Opportunity & Risk Map</span>
+              <span class="feature-icon" aria-hidden="true">M</span>
+              <div>
+                <span class="panel-label">AI Opportunity & Risk Map</span>
+                <h3>Neutrale Einordnung nach Chance und Risiko</h3>
+              </div>
               <span class="pro-badge">Neutral</span>
             </div>
             <div class="risk-map" id="riskMap"></div>
           </article>
-          <article class="premium-card">
+          <article class="premium-card requires-pro" data-feature-card="Watchlist Pulse">
             <div class="card-headline">
-              <span class="panel-label">Watchlist Pulse</span>
+              <span class="feature-icon" aria-hidden="true">W</span>
+              <div>
+                <span class="panel-label">Watchlist Pulse</span>
+                <h3>Was seit deinem letzten Besuch auffällt</h3>
+              </div>
               <span class="pro-badge locked-copy" data-pro-copy>Pro Briefing</span>
             </div>
             <div id="watchlistPulse" class="pulse-list"></div>
             <button class="primary-action" id="generateWatchlistBriefing" type="button">Watchlist Briefing generieren</button>
             <p class="generated-copy" id="watchlistPulseBriefing"></p>
           </article>
-          <article class="premium-card">
+          <article class="premium-card requires-pro" data-feature-card="News Impact Scanner">
             <div class="card-headline">
-              <span class="panel-label">News Impact Scanner</span>
+              <span class="feature-icon" aria-hidden="true">N</span>
+              <div>
+                <span class="panel-label">News Impact Scanner</span>
+                <h3>News nach Score, Assets und Watchlist-Kontext</h3>
+              </div>
               <span class="pro-badge locked-copy" data-pro-copy>Pro Impact</span>
             </div>
             <div class="impact-list" id="newsImpactScanner"></div>
           </article>
-          <article class="premium-card">
+          <article class="premium-card" data-feature-card="Compare Battle">
             <div class="card-headline">
-              <span class="panel-label">Compare Battle</span>
+              <span class="feature-icon" aria-hidden="true">C</span>
+              <div>
+                <span class="panel-label">Compare Battle</span>
+                <h3>Assets neutral gegenüberstellen</h3>
+              </div>
               <span class="pro-badge">2-4 Assets</span>
             </div>
             <div id="compareBattle" class="battle-panel"></div>
           </article>
-          <article class="premium-card">
+          <article class="premium-card requires-pro" data-feature-card="Smart Alerts">
             <div class="card-headline">
-              <span class="panel-label">Smart Alerts</span>
+              <span class="feature-icon" aria-hidden="true">A</span>
+              <div>
+                <span class="panel-label">Smart Alerts</span>
+                <h3>Preis-, Volatilitäts- und News-Trigger</h3>
+              </div>
               <span class="pro-badge locked-copy" data-pro-copy>Pro</span>
             </div>
             <label class="field">
@@ -677,14 +805,22 @@
                 <option value="volatility">Ungewöhnliche Volatilität</option>
                 <option value="news">News Impact hoch</option>
                 <option value="trend">Mehrere schwache Tage</option>
+                <option value="risk">Risiko-Level erhöht</option>
+                <option value="watchlist">Watchlist-Wert stark bewegt</option>
+                <option value="etf">ETF weicht vom Trend ab</option>
+                <option value="crypto">Krypto nähert sich ATH/Support-Zone</option>
               </select>
             </label>
             <button class="primary-action" id="createSmartAlert" type="button">Smart Alert speichern</button>
             <div class="smart-alerts" id="smartAlertsList"></div>
           </article>
-          <article class="premium-card">
+          <article class="premium-card requires-pro" data-feature-card="AI Briefing Generator">
             <div class="card-headline">
-              <span class="panel-label">AI Briefing Generator</span>
+              <span class="feature-icon" aria-hidden="true">B</span>
+              <div>
+                <span class="panel-label">AI Briefing Generator</span>
+                <h3>Briefings nach Markt, Watchlist oder Assetklasse</h3>
+              </div>
               <span class="pro-badge locked-copy" data-pro-copy>Pro</span>
             </div>
             <label class="field">
@@ -695,14 +831,20 @@
                 <option value="etf">Nur ETFs</option>
                 <option value="crypto">Nur Krypto</option>
                 <option value="high">Nur hohe Relevanz</option>
+                <option value="risk">Nur Risiken</option>
+                <option value="news">Nur News Impact</option>
               </select>
             </label>
             <button class="primary-action" id="generatePremiumBriefing" type="button">Briefing generieren</button>
             <div class="generated-briefing" id="generatedBriefing"></div>
           </article>
-          <article class="premium-card">
+          <article class="premium-card" data-feature-card="Confidence">
             <div class="card-headline">
-              <span class="panel-label">Confidence & Learning Layer</span>
+              <span class="feature-icon" aria-hidden="true">L</span>
+              <div>
+                <span class="panel-label">Confidence & Learning Layer</span>
+                <h3>Datenqualität und Begriffe verständlich erklärt</h3>
+              </div>
               <span class="pro-badge">Trust</span>
             </div>
             <div class="confidence-box" id="confidenceBox">Datenlage wird nach Asset, Chart, News und Quelle bewertet.</div>
@@ -721,8 +863,73 @@
           <button type="button" data-pro-feature="Smart Alerts">Smart Alerts</button>
           <button type="button" data-pro-feature="Watchlist Briefing">Watchlist Briefing</button>
           <button type="button" data-pro-feature="News Impact Scanner">News Impact Scanner</button>
-          <button type="button" data-pro-feature="Compare Battle">Compare Battle</button>
-          <button type="button" data-pro-feature="Export & Reports">Export & Reports</button>
+            <button type="button" data-pro-feature="Compare Battle">Compare Battle</button>
+            <button type="button" data-pro-feature="Export & Reports">Export & Reports</button>
+        </div>
+        <section class="pro-dashboard" id="proDashboard" aria-label="Pro Dashboard">
+          <div class="pro-dashboard-head">
+            <div>
+              <span class="panel-label">Pro Dashboard</span>
+              <h3>Dein persönlicher AI-Marktassistent</h3>
+              <p>Pro bündelt Watchlist-Intelligence, Deep Dives, Smart Alerts, News Impact und Reports zu einem täglichen Entscheidungscockpit ohne Anlageberatung.</p>
+            </div>
+            <button class="primary-action" id="openProDashboard" type="button">Pro Dashboard öffnen</button>
+          </div>
+          <div class="pro-experience-grid">
+            <button type="button" data-pro-dashboard-action="assistant">
+              <span>AI</span>
+              <strong>AI Assistant Pro</strong>
+              <p>Kontextbezogene Antworten zu Asset, Watchlist, News, Risiko und Vergleich.</p>
+            </button>
+            <button type="button" data-pro-dashboard-action="watchlist">
+              <span>WL</span>
+              <strong>Watchlist Intelligence</strong>
+              <p>Gewinner, Verlierer, Volatilität, offene Alerts und News-Fokus.</p>
+            </button>
+            <button type="button" data-pro-dashboard-action="deep">
+              <span>DD</span>
+              <strong>Deep Asset Analysis</strong>
+              <p>Aktien, ETFs und Krypto werden typgerecht tiefer eingeordnet.</p>
+            </button>
+            <button type="button" data-pro-dashboard-action="news">
+              <span>NI</span>
+              <strong>News Impact Pro</strong>
+              <p>Direkte und indirekte Watchlist-Betroffenheit mit Impact Score.</p>
+            </button>
+            <button type="button" data-pro-dashboard-action="compare">
+              <span>VS</span>
+              <strong>Compare Battle Pro</strong>
+              <p>Momentum, Risiko, defensive Wirkung und Datenqualität vergleichen.</p>
+            </button>
+            <button type="button" data-pro-dashboard-action="report">
+              <span>RP</span>
+              <strong>Reports & Export</strong>
+              <p>Report-Zusammenfassung vorbereiten und Export simulieren.</p>
+            </button>
+          </div>
+          <div class="pro-output" id="proDashboardOutput">
+            <span class="panel-label">Live Preview</span>
+            <p>Wähle ein Pro-Modul. Free zeigt eine Vorschau, Pro führt die Demo-Aktion direkt aus.</p>
+          </div>
+        </section>
+        <div class="pro-compare-table" aria-label="Free Pro Vergleich">
+          <div class="table-toolbar">
+            <div>
+              <span class="panel-label">Free vs Pro</span>
+              <h3>Warum Pro spürbar mehr spart als nur Klicks</h3>
+            </div>
+          </div>
+          <table>
+            <thead><tr><th>Feature</th><th>Free</th><th>Pro</th></tr></thead>
+            <tbody>
+              <tr><td>Watchlist</td><td>Basis, empfohlen bis 5 Werte</td><td>Unbegrenzt mit Pulse, Gewinner/Verlierer und Risiko-Fokus</td></tr>
+              <tr><td>AI Assistant</td><td>3 Fragen/Tag, Basis-Kontext</td><td>Unbegrenzt, Asset-, Watchlist-, News- und Compare-Kontext</td></tr>
+              <tr><td>Smart Alerts</td><td>Einfache Preisalarme</td><td>Volatilität, News Impact, Trendabweichung, Risikoänderung</td></tr>
+              <tr><td>News Impact</td><td>Titel und Kurzfassung</td><td>Impact Score, betroffene Assets, Watchlist-Bezug, Chancen/Risiken</td></tr>
+              <tr><td>Deep Asset Analysis</td><td>Kurzvorschau</td><td>Aktien-, ETF- und Krypto-spezifische Analyse mit Confidence Score</td></tr>
+              <tr><td>Reports</td><td>Nicht verfügbar</td><td>Report vorbereiten, Export-Demo, Verlauf und Datenqualität</td></tr>
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -737,18 +944,37 @@
             <span class="plan-name">Free</span>
             <strong>0 €</strong>
             <p>Basis-Briefing, begrenzte Watchlist, grundlegende AI-Zusammenfassungen, verzögerte Daten und klare Risikohinweise.</p>
+            <ul class="plan-features">
+              <li>3 AI-Fragen pro Tag</li>
+              <li>Basis-Screener und Watchlist</li>
+              <li>Demo-/Live-Datenstatus</li>
+            </ul>
             <button class="secondary-action plan-button" type="button" data-plan="Free">Free starten</button>
           </article>
           <article class="featured-plan">
             <span class="plan-name">Pro</span>
             <strong>12,99 €</strong>
-            <p>Unbegrenzte Watchlist, erweiterte AI-Briefings, Preisalarme, News-Zusammenfassungen, Exporte, mehr Historie und Premium-Dashboard.</p>
-            <button class="primary-action plan-button" type="button" data-plan="Pro">Pro ansehen</button>
+            <p><b>Für Nutzer, die ihre Watchlist täglich verstehen wollen.</b> Spart Zeit durch AI-Analysen, Watchlist-Briefings und intelligente Markt-Signale.</p>
+            <ul class="plan-features">
+              <li>Unbegrenzter AI Assistant</li>
+              <li>Watchlist Pulse und Smart Alerts</li>
+              <li>News Impact, Compare Battle, Confidence Score</li>
+              <li>Deep Asset Analysis für Aktien, ETFs und Krypto</li>
+              <li>AI Briefing Generator mit Timestamp</li>
+              <li>Reports & Export-Demo</li>
+              <li>Mehr Historie und Datenqualitäts-Kontext</li>
+            </ul>
+            <button class="primary-action plan-button" type="button" data-plan="Pro" id="proPlanButton">Nexus Code einlösen</button>
           </article>
           <article>
             <span class="plan-name">Business</span>
             <strong>Individuell</strong>
             <p>Team-Dashboards, API-Zugang, Reports, Rollenrechte, Compliance-Export und dedizierte Datenpakete für professionelle Workflows.</p>
+            <ul class="plan-features">
+              <li>Team-Workflows und Rollen</li>
+              <li>API, Reports und Adminbereich</li>
+              <li>Datenpakete und Compliance Export</li>
+            </ul>
             <button class="secondary-action plan-button" type="button" data-plan="Business">Kontakt aufnehmen</button>
           </article>
         </div>
@@ -831,28 +1057,36 @@
     </div>
 
     <button class="assistant-fab" id="assistantFab" type="button" aria-label="AI Assistant öffnen">
-      AI
+      <span class="assistant-core">AI</span>
       <span id="assistantQuota">3</span>
     </button>
 
     <aside class="assistant-drawer" id="assistantDrawer" hidden aria-label="AI Market Assistant">
       <div class="assistant-head">
         <div>
-          <span class="panel-label">AI Market Assistant</span>
+          <span class="panel-label">Nexus AI Assistant</span>
           <h2>Frag dein Markt-Cockpit</h2>
         </div>
         <button class="modal-close" id="assistantClose" type="button" aria-label="Assistant schließen">×</button>
       </div>
+      <div class="assistant-context">
+        <span>Kontext</span>
+        <strong id="assistantContextLine">Aktives Asset, Watchlist, News, Compare und Alerts</strong>
+      </div>
+      <div class="assistant-limit" id="assistantLimit">3/3 Free-Fragen übrig</div>
       <p id="assistantAccessText">Free: 3 Fragen pro Tag. Pro: unbegrenzt mit Watchlist-, News- und Risikoanalyse.</p>
       <div class="assistant-suggestions" id="assistantSuggestions">
-        <button type="button" data-question="Warum bewegt sich das aktive Asset heute?">Warum bewegt es sich?</button>
+        <button type="button" data-question="Warum bewegt sich dieses Asset?">Warum bewegt sich dieses Asset?</button>
+        <button type="button" data-question="Analysiere meine Watchlist">Analysiere meine Watchlist</button>
+        <button type="button" data-question="Welche Risiken sehe ich?">Welche Risiken sehe ich?</button>
         <button type="button" data-question="Vergleiche Apple und Nvidia">Apple vs Nvidia</button>
-        <button type="button" data-question="Welche Werte in meiner Watchlist sind auffällig?">Watchlist prüfen</button>
-        <button type="button" data-question="Erkläre mir diese Bewegung einfach">Einfach erklären</button>
+        <button type="button" data-question="Welche News sind relevant?">Welche News sind relevant?</button>
+        <button type="button" data-question="Erkläre mir TER und ETF-Kennzahlen">Kennzahlen erklären</button>
+        <button type="button" data-question="Generiere mein Tagesbriefing">Tagesbriefing</button>
       </div>
       <div class="assistant-messages" id="assistantMessages"></div>
       <form class="assistant-form" id="assistantForm">
-        <input id="assistantInput" type="text" placeholder="Frage zum Markt, Asset oder deiner Watchlist" />
+        <textarea id="assistantInput" rows="1" placeholder="Frage zum Markt, Asset oder deiner Watchlist"></textarea>
         <button class="primary-action" type="submit">Senden</button>
       </form>
     </aside>
@@ -860,12 +1094,20 @@
     <div class="modal-backdrop" id="accessModal" hidden>
       <section class="modal" role="dialog" aria-modal="true" aria-labelledby="accessTitle">
         <button class="modal-close" id="accessClose" type="button" aria-label="Code-Dialog schließen">×</button>
-        <span class="panel-label">Nexus Code</span>
-        <h2 id="accessTitle">Pro-Demo freischalten</h2>
+        <div class="security-header">
+          <span class="security-icon" aria-hidden="true">NX</span>
+          <div>
+            <span class="panel-label">Secure Nexus Access</span>
+            <h2 id="accessTitle">Pro-Demo freischalten</h2>
+          </div>
+        </div>
         <p>Gib deinen Nexus-Code ein. Für diese Demo wird der Code lokal geprüft; in einem echten Produkt gehört diese Prüfung auf den Server.</p>
         <label class="field">
           <span>Access Code</span>
-          <input id="accessCodeInput" type="text" placeholder="67tz-OiL9-009K-Pokl-AqQq-U76i-KNml" />
+          <div class="access-code-field">
+            <input id="accessCodeInput" type="password" autocomplete="off" spellcheck="false" placeholder="Demo-Code eingeben" />
+            <button class="secondary-action" id="toggleAccessCode" type="button" aria-pressed="false">Anzeigen</button>
+          </div>
         </label>
         <p class="form-message" id="accessCodeMessage"></p>
         <div class="detail-actions">
