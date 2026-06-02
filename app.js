@@ -235,6 +235,46 @@ function normalizeView(value = "dashboard") {
   return VIEW_ALIASES[clean] || "dashboard";
 }
 
+function migrateLegacyAccess() {
+  const storedPlan = (localStorage.getItem("marketpilot-current-plan") || localStorage.getItem("currentPlan") || "").toLowerCase();
+  const storedAccessMethod = (
+    localStorage.getItem("accessMethod") ||
+    localStorage.getItem("proAccessMethod") ||
+    localStorage.getItem("marketpilot-pro-method") ||
+    localStorage.getItem("marketpilot-access-method") ||
+    ""
+  ).toLowerCase();
+  const legacyCodeAccess = storedAccessMethod === "code";
+  const legacyProActive =
+    localStorage.getItem("isProUser") === "true" ||
+    localStorage.getItem("marketpilot-pro") === "true" ||
+    localStorage.getItem("marketpilot-demo-pro") === "true" ||
+    localStorage.getItem("marketpilot-pro-demo") === "true" ||
+    localStorage.getItem("nexus-pro-access") === "true";
+  const shouldUpgradeCodeAccess = legacyCodeAccess && (legacyProActive || ["pro", "elite"].includes(storedPlan));
+  if (storedPlan === "business") return "business";
+  if (!shouldUpgradeCodeAccess) return storedPlan || (legacyProActive ? "pro" : "free");
+  localStorage.setItem("marketpilot-current-plan", "business");
+  localStorage.setItem("currentPlan", "business");
+  localStorage.setItem("marketpilot-pro", "true");
+  localStorage.setItem("isProUser", "true");
+  localStorage.setItem("accessMethod", "code");
+  localStorage.setItem("proAccessMethod", "code");
+  localStorage.setItem("marketpilot-pro-method", "code");
+  localStorage.setItem("marketpilot-access-method", "code");
+  if (!localStorage.getItem("planActivatedAt")) localStorage.setItem("planActivatedAt", new Date().toISOString());
+  return "business";
+}
+
+function initSubscriptionState() {
+  const migratedPlan = migrateLegacyAccess();
+  const currentPlan = (localStorage.getItem("marketpilot-current-plan") || localStorage.getItem("currentPlan") || migratedPlan || "free").toLowerCase();
+  const accessMethod = localStorage.getItem("accessMethod") || localStorage.getItem("proAccessMethod") || localStorage.getItem("marketpilot-pro-method") || "";
+  return { currentPlan, accessMethod };
+}
+
+const initialSubscription = initSubscriptionState();
+
 const state = {
   activeFilter: "Alle",
   activeView: normalizeView(location.hash),
@@ -263,13 +303,15 @@ const state = {
   lastVisit: localStorage.getItem("marketpilot-last-visit") || null,
   renderQueued: false,
   hydrationQueued: false,
-  currentPlan: localStorage.getItem("marketpilot-current-plan") || (localStorage.getItem("marketpilot-pro") === "true" || localStorage.getItem("isProUser") === "true" ? "pro" : "free"),
-  isProUser: ["pro", "elite", "business"].includes(localStorage.getItem("marketpilot-current-plan") || (localStorage.getItem("marketpilot-pro") === "true" || localStorage.getItem("isProUser") === "true" ? "pro" : "free")),
+  currentPlan: initialSubscription.currentPlan,
+  isProUser: ["pro", "elite", "business"].includes(initialSubscription.currentPlan),
   assistantMessages: JSON.parse(localStorage.getItem("marketpilot-assistant") || "[]"),
   assistantDaily: JSON.parse(localStorage.getItem("marketpilot-assistant-daily") || "{}"),
   marketRadarFilter: "Alle",
   smartAlerts: JSON.parse(localStorage.getItem("marketpilot-smart-alerts") || "[]"),
-  proAccessMethod: localStorage.getItem("marketpilot-pro-method") || localStorage.getItem("proAccessMethod") || "",
+  accessMethod: initialSubscription.accessMethod,
+  proAccessMethod: initialSubscription.accessMethod,
+  planActivatedAt: localStorage.getItem("planActivatedAt") || "",
   checkoutPlan: localStorage.getItem("selectedBillingCycle") || localStorage.getItem("marketpilot-billing-cycle") || localStorage.getItem("marketpilot-checkout-plan") || "monthly",
   checkoutTargetPlan: "pro",
   checkoutLoading: false
@@ -281,7 +323,7 @@ const isLocalHttp = location.protocol.startsWith("http") && ["127.0.0.1", "local
 
 const ACCESS_CONFIG = {
   codes: {
-    "67tz-OiL9-009K-Pokl-AqQq-U76i-KNml": { plan: "elite", label: "Nexus Master Code" }
+    "67tz-OiL9-009K-Pokl-AqQq-U76i-KNml": { plan: "business", accessMethod: "code", label: "Nexus Master Code" }
   }
 };
 
@@ -587,19 +629,25 @@ function saveLastViewed() {
 function saveProState() {
   syncPlanFlags();
   localStorage.setItem("marketpilot-current-plan", state.currentPlan);
+  localStorage.setItem("currentPlan", state.currentPlan);
   localStorage.setItem("marketpilot-pro", String(state.isProUser));
   localStorage.setItem("marketpilot-pro-method", state.proAccessMethod || "");
+  localStorage.setItem("marketpilot-access-method", state.accessMethod || state.proAccessMethod || "");
   localStorage.setItem("marketpilot-billing-cycle", state.checkoutPlan || "monthly");
   localStorage.setItem("marketpilot-checkout-plan", state.checkoutPlan || "monthly");
   localStorage.setItem("isProUser", String(state.isProUser));
+  localStorage.setItem("accessMethod", state.accessMethod || state.proAccessMethod || "");
   localStorage.setItem("proAccessMethod", state.proAccessMethod || "");
   localStorage.setItem("selectedBillingCycle", state.checkoutPlan || "monthly");
+  if (state.planActivatedAt) localStorage.setItem("planActivatedAt", state.planActivatedAt);
 }
 
 function activatePlan(plan, method) {
   state.currentPlan = normalizePlan(plan);
   syncPlanFlags();
+  state.accessMethod = method;
   state.proAccessMethod = method;
+  state.planActivatedAt = new Date().toISOString();
   saveProState();
   updateProUI();
   renderPricing();
@@ -803,7 +851,7 @@ function renderPricing() {
       <div>
         <span class="panel-label">Account & Plan</span>
         <h3>${escapeHTML(currentPlanConfig().name)} aktiv</h3>
-        <p>Billing: ${cycle === "yearly" ? "Jährlich" : "Monatlich"} · Zugang: ${state.proAccessMethod || "Free"} · AI-Fragen heute: ${remainingAssistantQuestions()}</p>
+        <p>Billing: ${cycle === "yearly" ? "Jährlich" : "Monatlich"} · Zugang: ${state.accessMethod || state.proAccessMethod || "Free"} · AI-Fragen heute: ${remainingAssistantQuestions()}</p>
       </div>
       <div class="account-plan-metrics">
         <span>Watchlist <b>${planLimitLabel(currentPlanConfig().watchlistLimit)}</b></span>
@@ -3257,7 +3305,9 @@ async function redeemAccessCode() {
 function resetDemoAccess() {
   state.currentPlan = "free";
   syncPlanFlags();
+  state.accessMethod = "";
   state.proAccessMethod = "";
+  state.planActivatedAt = "";
   saveProState();
   updateProUI();
   renderPricing();
