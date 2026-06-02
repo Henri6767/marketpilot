@@ -14,15 +14,15 @@
       </a>
       <button class="mobile-menu-button" id="mobileMenuButton" type="button" aria-expanded="false" aria-controls="mainNav">Menü</button>
       <nav class="nav" id="mainNav">
-        <a class="active" href="#dashboard">Dashboard</a>
+        <a class="active" href="#dashboard" data-nav-icon="pulse">Dashboard</a>
         <a href="#markets">Märkte</a>
-        <a href="#analysis">Analyse</a>
-        <a href="#watchlist">Watchlist</a>
-        <a href="#news">News</a>
-        <a href="#alerts">Alerts</a>
-        <a href="#compare">Compare</a>
-        <a href="#pro">Pro</a>
-        <a href="#pricing">Preise</a>
+        <a href="#analysis" data-nav-icon="chart">Analyse</a>
+        <a href="#watchlist" data-nav-icon="star">Watchlist</a>
+        <a href="#news" data-nav-icon="wave">News</a>
+        <a href="#alerts" data-nav-icon="radar">Alerts</a>
+        <a href="#compare" data-nav-icon="split">Compare</a>
+        <a href="#pro" data-nav-icon="bolt">Pro</a>
+        <a href="#pricing" data-nav-icon="card">Preise</a>
       </nav>
       <div class="topbar-actions">
         <button class="data-status-pill" id="dataSourceButton" type="button">Daten: Live/Cache</button>
@@ -46,8 +46,8 @@
             MarketPilot Nexus erkennt relevante Bewegungen, News und Risiken in Aktien, ETFs und Krypto und übersetzt sie in verständliche Briefings. Keine Anlageberatung, sondern klare Markteinordnung.
           </p>
           <div class="hero-actions">
-            <a class="primary-action" href="#watchlist">Watchlist starten</a>
-            <a class="secondary-action" href="#briefing">Dashboard ansehen</a>
+            <a class="primary-action" href="#dashboard">Dashboard ansehen</a>
+            <a class="secondary-action" href="#watchlist">Watchlist starten</a>
           </div>
           <div class="quick-actions" aria-label="Schnellaktionen">
             <button type="button" data-quick-action="search">Asset suchen</button>
@@ -126,7 +126,7 @@
           <article>
             <span class="panel-label">Heute wichtig</span>
             <strong id="todayFocus">Marktstatus bereit</strong>
-            <p id="todayReason">Relevante Bewegungen werden nach Risiko, Assetklasse und Datenstatus priorisiert.</p>
+            <p id="todayReason">Krypto, Tech und breite ETFs werden nach Bewegung, Risiko und News Impact priorisiert.</p>
           </article>
           <article>
             <span class="panel-label">Watchlist Check</span>
@@ -199,7 +199,7 @@
           </button>
           <button class="dashboard-widget" type="button" data-widget-target="#legal">
             <span>Datenstatus</span>
-            <strong id="widgetDataHealth">Live/Demo</strong>
+            <strong id="widgetDataHealth">Live/Cache</strong>
             <small>Quellen transparent sichtbar</small>
           </button>
         </div>
@@ -270,12 +270,12 @@
         <div class="briefing-grid" id="briefingGrid">
           <article class="briefing-module expanded" data-briefing-card="overview" tabindex="0">
             <span class="panel-label">Was ist passiert?</span>
-            <p id="briefWhat">Marktdaten werden ausgewertet.</p>
+            <p id="briefWhat">Bitcoin, Nvidia und breit gestreute ETFs stehen heute im Fokus der Marktbewegung.</p>
             <small>Keine Anlageberatung.</small>
           </article>
           <article class="briefing-module" data-briefing-card="winners" tabindex="0">
             <span class="panel-label">Warum ist es relevant?</span>
-            <p id="briefWhy">Die Relevanz wird aus Bewegung, Risiko und Assetklasse abgeleitet.</p>
+            <p id="briefWhy">Starke Bewegungen können Chancen zeigen, erhöhen aber auch Rückschlagrisiken.</p>
             <small>Klicken, um Fokus zu setzen.</small>
           </article>
           <article class="briefing-module" data-briefing-card="opportunities" tabindex="0">
@@ -296,7 +296,7 @@
           <article class="briefing-module" data-briefing-card="sentiment" tabindex="0">
             <span class="panel-label">Marktstimmung</span>
             <strong id="sentimentScore">Neutral</strong>
-            <p id="sentimentText">Warte auf Live-Daten.</p>
+            <p id="sentimentText">Watchlist, Marktbreite und Risiko werden laufend zusammengeführt.</p>
             <small>AI-Ausgaben dienen nur zur Information.</small>
           </article>
         </div>
@@ -436,7 +436,7 @@
             <div class="chart-shell detail-tab-panel active" data-detail-panel="chart">
               <canvas id="priceChart" width="980" height="360" aria-label="Historischer Kurschart"></canvas>
               <div class="chart-tooltip" id="chartTooltip" hidden></div>
-              <div class="chart-loading" id="chartLoading">Chartdaten werden vorbereitet</div>
+              <div class="chart-loading" id="chartLoading">Chart bereit</div>
             </div>
 
             <div class="metric-grid detail-tab-panel" data-detail-panel="overview">
@@ -477,7 +477,7 @@
             <div class="detail-extra-grid detail-tab-panel" data-detail-panel="overview">
               <article>
                 <span class="panel-label">Kennzahlen</span>
-                <p id="assetMetrics">Kennzahlen werden nach Asset-Typ geladen.</p>
+                <p id="assetMetrics">Asset-Kennzahlen erscheinen typgerecht nach Aktie, ETF oder Krypto.</p>
               </article>
               <article>
                 <span class="panel-label">Chart-Marker</span>
@@ -515,7 +515,7 @@
             <div class="detail-extra-grid detail-tab-panel" data-detail-panel="metrics">
               <article>
                 <span class="panel-label">Asset-Typ-Kennzahlen</span>
-                <p id="assetMetricsDeep">Kennzahlen werden nach Asset-Typ geladen.</p>
+                <p id="assetMetricsDeep">Typgerechte Kennzahlen für Aktien, ETFs und Krypto sind vorbereitet.</p>
               </article>
               <article>
                 <span class="panel-label">Datenqualität</span>
@@ -732,7 +732,7 @@
           <div class="access-actions">
             <button class="primary-action" id="openCheckout" type="button">Pro kaufen</button>
             <button class="secondary-action" id="openAccessModal" type="button">Code einlösen</button>
-            <button class="secondary-action developer-reset" id="resetDemoAccess" type="button" hidden>Demo-Zugang zurücksetzen</button>
+            <button class="secondary-action developer-reset" id="resetDemoAccess" type="button" hidden>Developer Access zurücksetzen</button>
           </div>
         </div>
         <div class="premium-grid">
@@ -863,7 +863,7 @@
               </div>
               <span class="pro-badge">Trust</span>
             </div>
-            <div class="confidence-box" id="confidenceBox">Datenlage wird nach Asset, Chart, News und Quelle bewertet.</div>
+            <div class="confidence-box" id="confidenceBox">Confidence Score aus Asset, Chart, News, Risiko und Quelle.</div>
             <div class="learning-layer" id="learningLayer">
               <button type="button" data-term="KGV">KGV</button>
               <button type="button" data-term="TER">TER</button>
@@ -1041,8 +1041,8 @@
           </article>
           <article>
             <h3>Account & Einstellungen</h3>
-            <p>Pro-Status, Watchlist, Notizen und Alarme bleiben lokal in diesem Browser gespeichert. Promo-Codes werden in einer echten Produktversion serverseitig geprüft.</p>
-            <button class="secondary-action developer-reset" id="resetDemoAccessLegal" type="button" hidden>Demo-Zugang zurücksetzen</button>
+            <p>Pro-Status, Watchlist, Notizen und Alarme bleiben lokal in diesem Browser gespeichert. Promo-Codes sind als Zusatzweg vorbereitet und können später serverseitig geprüft werden.</p>
+            <button class="secondary-action developer-reset" id="resetDemoAccessLegal" type="button" hidden>Developer Access zurücksetzen</button>
           </article>
         </div>
       </section>
@@ -1120,10 +1120,10 @@
           <span class="security-icon" aria-hidden="true">NX</span>
           <div>
             <span class="panel-label">Secure Nexus Access</span>
-            <h2 id="accessTitle">Pro-Demo freischalten</h2>
+            <h2 id="accessTitle">Nexus Code einlösen</h2>
           </div>
         </div>
-        <p>Gib deinen Nexus-Code ein. Für diese Demo wird der Code lokal geprüft; in einem echten Produkt gehört diese Prüfung auf den Server.</p>
+        <p>Gib deinen Nexus-Code ein. Der Code ist ein Zusatzweg für Promo- oder Testzugänge.</p>
         <label class="field">
           <span>Access Code</span>
           <div class="access-code-field">
@@ -1174,7 +1174,7 @@
         </div>
         <p class="form-message" id="checkoutMessage"></p>
         <div class="detail-actions">
-          <button class="primary-action" id="completeCheckout" type="button">Demo-Kauf abschließen</button>
+          <button class="primary-action" id="completeCheckout" type="button">Pro aktivieren</button>
           <button class="link-action" id="checkoutAccessCode" type="button">Ich habe einen Nexus Code</button>
         </div>
       </section>
@@ -1184,7 +1184,7 @@
       <button class="modal-close" id="drawerClose" type="button" aria-label="Datenquellen schließen">×</button>
       <span class="panel-label">Datenquellen</span>
       <h2>Transparente Data Health</h2>
-      <p>Krypto-Daten kommen in dieser Demo über CoinGecko. Aktien und ETFs werden über Yahoo-Finance-Chartdaten oder Demo-Fallbacks dargestellt. Für ein kommerzielles Produkt wären lizenzierte Datenanbieter nötig.</p>
+      <p>Krypto-Daten kommen über CoinGecko. Aktien und ETFs werden über Yahoo-Finance-Chartdaten oder lokale Fallbacks dargestellt. Daten können je nach Quelle verzögert sein.</p>
       <div class="legal-grid">
         <article><h3>Live</h3><p>Quelle antwortet aktuell.</p></article>
         <article><h3>Verzögert</h3><p>Datenquelle liefert verzögert oder nicht börsennah.</p></article>

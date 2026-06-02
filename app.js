@@ -496,11 +496,11 @@ function requirePro(feature, benefit) {
 function updateProUI() {
   document.body.classList.toggle("is-pro", state.isProUser);
   document.body.classList.toggle("is-free", !state.isProUser);
-  const methodLabel = state.proAccessMethod === "code" ? "Aktiviert per Nexus Code." : state.proAccessMethod === "purchase" ? "Aktiviert per Kauf-Flow." : "";
+  const methodLabel = state.proAccessMethod === "code" ? "Per Nexus Code aktiviert." : state.proAccessMethod === "purchase" ? "Per Kauf-Flow aktiviert." : "";
   document.querySelector("#proStatusLabel").textContent = state.isProUser ? "Pro aktiv" : "Free";
   document.querySelector("#proStatusText").textContent = state.isProUser
-    ? "Alle Pro-Funktionen sind freigeschaltet: Assistant, Smart Alerts, Briefings und Scanner."
-    : "Free: 3 AI-Fragen pro Tag, Basis-Insights und sichtbare Pro-Vorschau.";
+    ? "Power-Modus aktiv: Assistant, Smart Alerts, Briefings, News Impact und Deep Dives sind freigeschaltet."
+    : "Free: 3 AI-Fragen pro Tag, Basis-Insights und elegante Pro-Vorschau.";
   selectors.accessCodeButton.textContent = state.isProUser ? "Pro aktiv" : "Nexus Code";
   if (selectors.navProStatus) selectors.navProStatus.textContent = state.isProUser ? "Pro aktiv" : "Free";
   selectors.openAccessModal.textContent = state.isProUser ? "Code verwalten" : "Code einlösen";
@@ -515,14 +515,25 @@ function updateProUI() {
   if (selectors.pricingAccessCode) selectors.pricingAccessCode.hidden = state.isProUser;
   if (selectors.proPriceLabel) selectors.proPriceLabel.textContent = state.checkoutPlan === "yearly" ? "119,99 €" : "12,99 €";
   selectors.resetDemoAccess.hidden = true;
-  selectors.resetDemoAccessLegal.hidden = !state.isProUser;
+  selectors.resetDemoAccessLegal.hidden = true;
   selectors.assistantQuota.textContent = remainingAssistantQuestions();
   if (selectors.assistantLimit) {
     selectors.assistantLimit.textContent = state.isProUser ? "Pro aktiv · unbegrenzte Fragen" : `${remainingAssistantQuestions()}/3 Free-Fragen übrig`;
   }
   if (selectors.assistantContextLine) {
     const quote = state.quoteCache.get(state.activeAsset.symbol);
-    selectors.assistantContextLine.textContent = `${state.activeAsset.name} · ${rangeLabel(state.activeRange)} · Risiko ${state.activeAsset.risk} · ${healthLabel(quote?.health)}`;
+    const viewLabel = {
+      dashboard: "Dashboard",
+      markets: "Märkte",
+      analysis: state.activeAsset.name,
+      watchlist: `Watchlist · ${state.savedSymbols.size} Werte`,
+      news: "News Intelligence",
+      alerts: `${Object.keys(state.alerts).length + state.smartAlerts.length} Alerts`,
+      compare: `Compare · ${state.compareSymbols.size} Werte`,
+      pro: "Pro Hub",
+      pricing: "Preise"
+    }[state.activeView] || "MarketPilot";
+    selectors.assistantContextLine.textContent = `${viewLabel} · ${rangeLabel(state.activeRange)} · Risiko ${state.activeAsset.risk} · ${healthLabel(quote?.health)}`;
   }
   selectors.assistantAccessText.textContent = state.isProUser
     ? "Pro: unbegrenzte Fragen mit Watchlist-, News- und Risikoanalyse."
@@ -530,18 +541,35 @@ function updateProUI() {
   document.querySelectorAll("[data-pro-copy]").forEach((item) => {
     item.textContent = state.isProUser ? "Pro aktiv" : item.dataset.proCopy || "Pro";
   });
+  updateAssistantSuggestions();
+}
+
+function updateAssistantSuggestions() {
+  if (!selectors.assistantSuggestions) return;
+  const prompts = {
+    dashboard: ["Was ist heute wichtig?", "Welche Risiken fallen auf?", "Wie starte ich meine Watchlist?"],
+    markets: ["Welche Assets sind auffällig?", "Zeige mir defensive ETFs", "Welche Kryptos bewegen sich stark?"],
+    analysis: ["Warum bewegt sich dieses Asset?", "Welche Risiken sehe ich?", "Welche Kennzahlen sind wichtig?"],
+    watchlist: ["Analysiere meine Watchlist", "Welche Werte brauchen Aufmerksamkeit?", "Welche Alerts fehlen?"],
+    news: ["Welche News sind relevant?", "Welche Assets sind betroffen?", "Was bedeutet der Impact?"],
+    alerts: ["Welche Alarme sollte ich setzen?", "Erkläre Smart Alerts", "Welche Risiken überwachen?"],
+    compare: ["Vergleiche diese Assets", "Welches ist volatiler?", "Was ist defensiver?"],
+    pro: ["Was bringt Pro konkret?", "Generiere mein Tagesbriefing", "Welche Pro-Module nutzen?"],
+    pricing: ["Welcher Plan passt?", "Was ist in Pro enthalten?", "Wie funktioniert der Nexus Code?"]
+  }[state.activeView] || ["Warum bewegt sich dieses Asset?", "Analysiere meine Watchlist", "Welche News sind relevant?"];
+  selectors.assistantSuggestions.innerHTML = prompts.map((prompt) => `<button type="button" data-question="${escapeHTML(prompt)}">${escapeHTML(prompt)}</button>`).join("");
 }
 
 function checkoutPriceCopy() {
   if (state.checkoutPlan === "yearly") {
     return {
       price: "119,99 € pro Jahr",
-      subline: "Jährlich zahlen und 2 Monate sparen. Der Kauf-Flow aktiviert Pro lokal."
+      subline: "Jährlich zahlen und 2 Monate sparen. Pro wird nach Abschluss sofort aktiviert."
     };
   }
   return {
     price: "12,99 € monatlich",
-    subline: "Monatlich kündbar. Der Kauf-Flow aktiviert Pro lokal."
+    subline: "Monatlich kündbar. Pro wird nach Abschluss sofort aktiviert."
   };
 }
 
@@ -565,7 +593,7 @@ function startCheckout(plan = state.checkoutPlan) {
   selectors.checkoutModal.hidden = false;
   selectors.checkoutMessage.textContent = "";
   selectors.completeCheckout.disabled = false;
-  selectors.completeCheckout.textContent = state.isProUser ? "Zum Pro Dashboard" : "Demo-Kauf abschließen";
+  selectors.completeCheckout.textContent = state.isProUser ? "Zum Pro Dashboard" : "Pro aktivieren";
   updateCheckoutUI();
 }
 
@@ -1392,7 +1420,7 @@ function updateDetailSkeleton(asset) {
   document.querySelector("#heroAsset").textContent = asset.name;
   document.querySelector("#heroSymbol").textContent = asset.symbol;
   if (selectors.smartAlertAsset) selectors.smartAlertAsset.value = asset.name;
-  selectors.chartLoading.textContent = "Chartdaten werden vorbereitet";
+  selectors.chartLoading.textContent = "Chart bereit";
   selectors.chartLoading.classList.remove("hidden");
   updateWatchlistButton();
 }
@@ -1424,7 +1452,7 @@ function aiCopyForAsset(asset, chart) {
 
 function heroInsightCopy(asset, period, health) {
   if (!Number.isFinite(period)) {
-    return { label: "Neutral", text: "Datenlage wird geprüft." };
+    return { label: "Neutral", text: "Marktbild stabil, Quelle im Blick." };
   }
   if (period > 2) {
     return { label: "Auffällig positiv", text: "Momentum und Datenqualität werden neutral eingeordnet." };
@@ -1496,7 +1524,7 @@ function updateDetailPanels(chart, period) {
     `Risikoprofil ${asset.risk}. Geschätzte Schwankung im geladenen Zeitraum: ${Number.isFinite(vol) ? `${vol.toFixed(2).replace(".", ",")}%` : "noch nicht verfügbar"}. Assetklasse: ${asset.type}, Sektor: ${assetSector(asset)}.`;
   document.querySelector("#assetRiskWatch").textContent =
     `Beobachte ${Number.isFinite(period) && period < 0 ? "Abwärtsdynamik und mögliche Unterstützungen" : "Momentum-Bestätigung und Rücksetzer"}, Datenstatus ${healthLabel(health)} sowie ähnliche Werte: ${peers || "keine passende Vergleichsgruppe geladen"}.`;
-  document.querySelector("#assetNotePreview").textContent = note || "Noch keine Notiz gespeichert. Speichere eine These, ein Kursziel oder einen Beobachtungspunkt.";
+  document.querySelector("#assetNotePreview").textContent = note || "Noch keine Notiz. Speichere hier deine Beobachtung zu These, Risiko oder Timing.";
   document.querySelector("#assetAlertPreview").textContent = alert || "Noch kein Alarm gespeichert. Lege eine Preis-, Risiko- oder News-Bedingung an.";
 }
 
@@ -1581,7 +1609,7 @@ function updateBriefing() {
   const watchlistHit = [...state.savedSymbols].map((symbol) => state.quoteCache.get(symbol)).filter(Boolean).sort((a, b) => Math.abs(b.changePct || 0) - Math.abs(a.changePct || 0))[0];
   const alertCount = Object.keys(state.alerts).length;
   document.querySelector("#dailyBriefing").textContent =
-    `Heute wichtig: Geladene Märkte zeigen im Schnitt ${formatPercent(average)}. ${strongest.asset.name} fällt positiv auf, ${weakest.asset.name} steht unter Druck. ${watchlistHit ? `In deiner Watchlist braucht ${watchlistHit.asset.name} mit ${formatPercent(watchlistHit.changePct)} Aufmerksamkeit.` : "Noch keine Watchlist-Signale vorhanden."} ${alertCount ? `${alertCount} Alarm(e) aktiv.` : "Keine aktiven Alarme."} Keine Anlageberatung.`;
+    `Heute wichtig: Geladene Märkte zeigen im Schnitt ${formatPercent(average)}. ${strongest.asset.name} fällt positiv auf, ${weakest.asset.name} steht unter Druck. ${watchlistHit ? `In deiner Watchlist braucht ${watchlistHit.asset.name} mit ${formatPercent(watchlistHit.changePct)} Aufmerksamkeit.` : "Lege 3 Werte an, damit dein Watchlist-Pulse persönlicher wird."} ${alertCount ? `${alertCount} Alarm(e) aktiv.` : "Keine aktiven Alarme."} Keine Anlageberatung.`;
   document.querySelector("#briefWhat").textContent =
     `${strongest.asset.name} zeigt die stärkste positive Bewegung (${formatPercent(strongest.changePct)}). ${weakest.asset.name} ist aktuell der schwächste geladene Wert (${formatPercent(weakest.changePct)}). ${watchlistHit ? `Persönlicher Fokus: ${watchlistHit.asset.name}.` : ""}`;
   document.querySelector("#briefWhy").textContent =
@@ -1738,7 +1766,7 @@ function setActiveView(view, options = {}) {
   document.body.dataset.activeView = next;
   document.querySelectorAll("main > section").forEach((section) => {
     const active = next === "dashboard"
-      ? ["dashboard", "briefing"].includes(section.id) || section.classList.contains("dashboard-grid-section")
+      ? ["dashboard", "briefing"].includes(section.id) || section.classList.contains("dashboard-grid-section") || section.classList.contains("onboarding-section")
       : (next === "analysis" ? section.id === "markets" : section.id === next);
     section.classList.toggle("is-active-view", active);
     section.setAttribute("aria-hidden", String(!active));
@@ -1756,6 +1784,7 @@ function setActiveView(view, options = {}) {
       if (cached) updateDetail(cached);
     });
   }
+  updateProUI();
   if (push) {
     const nextHash = `#${next}`;
     if (location.hash !== nextHash) history.pushState(null, "", nextHash);
@@ -1765,6 +1794,11 @@ function setActiveView(view, options = {}) {
 
 function setupActiveNavigation() {
   document.body.classList.add("app-view-mode");
+  document.querySelectorAll(".nav a").forEach((link) => {
+    const view = normalizeView(link.getAttribute("href"));
+    const icon = { dashboard: "pulse", markets: "grid", analysis: "chart", watchlist: "star", news: "wave", alerts: "radar", compare: "split", pro: "bolt", pricing: "card" }[view];
+    if (icon && !link.dataset.navIcon) link.dataset.navIcon = icon;
+  });
   document.addEventListener("click", (event) => {
     const link = event.target.closest("a[href^='#']");
     if (!link) return;
@@ -1866,7 +1900,7 @@ function openModal(mode, asset, meta = {}) {
         ? `${meta.benefit || "Diese Premium-Funktion erweitert den AI-Kontext um Watchlist, News, Risiko und Vergleichsdaten."} Kaufe Pro oder nutze einen vorhandenen Promo-Code.`
         : mode === "learning"
           ? learningCopy(meta.term)
-          : "Bereite einen Preisalarm vor. In dieser Demo wird der Zielwert lokal gespeichert.";
+          : "Lege einen Preisalarm an. Der Zielwert bleibt lokal in deinem Browser gespeichert.";
   if (mode === "pro") {
     selectors.modalBody.innerHTML = `
       <div class="upgrade-preview">
@@ -2103,7 +2137,7 @@ function proDashboardHTML(action) {
     return `<span class="panel-label">Compare Battle Pro</span><strong>${pair.map((asset) => asset.symbol).join(" vs ")}</strong><p>${pair.map((asset) => `${asset.symbol}: Risiko ${asset.risk}, ${sentimentFromChange(state.quoteCache.get(asset.symbol)?.changePct)}, ${assetSector(asset)}`).join(" · ")}. Pro ergänzt Momentum-, Defensive- und Datenqualitäts-Scores.</p>`;
   }
   if (action === "report") {
-    return `<span class="panel-label">Reports & Export</span><strong>Report vorbereitet</strong><p>Assets: ${[context.asset, ...context.watchlist.slice(0, 4)].map((asset) => asset.symbol).join(", ")}. Zeitraum: ${context.activeTimeframe}. AI-Fazit, Risiken, News Impact und Datenqualität wurden als Report-Preview zusammengestellt.</p><button class="secondary-action" type="button" data-report-export>Als PDF exportieren</button>`;
+    return `<span class="panel-label">Reports & Export</span><strong>Report bereit</strong><p>Assets: ${[context.asset, ...context.watchlist.slice(0, 4)].map((asset) => asset.symbol).join(", ")}. Zeitraum: ${context.activeTimeframe}. AI-Fazit, Risiken, News Impact und Datenqualität wurden als Report-Preview zusammengestellt.</p><button class="secondary-action" type="button" data-report-export>Als PDF exportieren</button>`;
   }
   return `<span class="panel-label">AI Assistant Pro</span><strong>Kontextanalyse bereit</strong><p>${generateAssistantResponse("Generiere mein Tagesbriefing", context).replace(/\n/g, "<br>")}</p>`;
 }
@@ -2155,6 +2189,8 @@ function assistantContext() {
     watchlist,
     compareList,
     newsItems,
+    activeView: state.activeView,
+    alerts: Object.keys(state.alerts).length + state.smartAlerts.length,
     activeTimeframe: rangeLabel(state.activeRange),
     chartPerformance: chart?.series ? periodChange(chart.series, getRangeConfig(state.activeRange).days) : quote?.changePct,
     sentiment: sentimentFromChange(quote?.changePct),
@@ -2633,7 +2669,7 @@ function handleQuickAction(action) {
   }
   if (action === "compare") setActiveView("compare");
   if (action === "briefing") {
-    showToast("Briefing wird neu generiert.");
+    showToast("Briefing synchronisiert.");
     window.setTimeout(() => {
       updateBriefing();
       showToast("Briefing wurde aktualisiert.");
@@ -2759,7 +2795,7 @@ document.querySelectorAll(".plan-button").forEach((button) => {
         openCheckout(state.checkoutPlan);
       }
     } else {
-      showToast(`${button.dataset.plan}: Zugang und Kontofunktionen werden vorbereitet.`);
+      showToast(`${button.dataset.plan}: Bereich geöffnet.`);
     }
   });
 });
@@ -2861,7 +2897,7 @@ function resetDemoAccess() {
   saveProState();
   updateProUI();
   renderPremiumModules();
-  showToast("Demo-Zugang zurückgesetzt.");
+  showToast("Developer Access zurückgesetzt.");
 }
 
 selectors.redeemAccessCode.addEventListener("click", redeemAccessCode);
@@ -2881,7 +2917,7 @@ selectors.openProDashboard?.addEventListener("click", () => {
 selectors.proDashboard?.addEventListener("click", (event) => {
   const action = event.target.closest("[data-pro-dashboard-action]")?.dataset.proDashboardAction;
   if (action) runProDashboardAction(action);
-  if (event.target.closest("[data-report-export]")) showToast("Export vorbereitet. PDF-Export ist als Preview markiert.");
+  if (event.target.closest("[data-report-export]")) showToast("Export bereit. PDF-Export ist als Preview markiert.");
 });
 
 selectors.premiumGrid?.addEventListener("click", (event) => {
@@ -2944,7 +2980,7 @@ selectors.riskMap.addEventListener("click", (event) => {
 });
 selectors.generateWatchlistBriefing.addEventListener("click", () => {
   if (!requirePro("Watchlist Briefing", "Pro generiert persönliche Briefings aus Watchlist, News, Risiken und Alarmen.")) return;
-  selectors.watchlistPulseBriefing.textContent = "Briefing wird aus Watchlist, Alerts und News Impact erstellt.";
+  selectors.watchlistPulseBriefing.textContent = "Briefing synchronisiert Watchlist, Alerts und News Impact.";
   window.setTimeout(() => {
     const saved = [...state.savedSymbols].map((symbol) => assets.find((asset) => asset.symbol === symbol)).filter(Boolean);
     selectors.watchlistPulseBriefing.textContent = `${formatDateTime(new Date(), { dateStyle: false, timeStyle: "short" })}: ${saved.length ? saved.map((asset) => asset.name).join(", ") : "Noch keine Watchlist"} geprüft. Fokus: auffällige Bewegung, aktive Alarme, Datenqualität und News Impact. Keine Anlageberatung.`;
@@ -2983,7 +3019,7 @@ selectors.smartAlertsList.addEventListener("click", (event) => {
 selectors.generatePremiumBriefing.addEventListener("click", () => {
   if (!requirePro("AI Briefing Generator", "Pro erstellt fokussierte Briefings für Markt, Watchlist, ETFs, Krypto oder hohe Relevanz.")) return;
   const scope = selectors.briefingScope.value;
-  selectors.generatedBriefing.innerHTML = `<article><strong>Briefing wird erstellt</strong><p>Fokus: ${scope}. Datenstatus, Watchlist und News Impact werden einbezogen.</p></article>`;
+  selectors.generatedBriefing.innerHTML = `<article><strong>Briefing bereit</strong><p>Fokus: ${scope}. Datenstatus, Watchlist und News Impact werden einbezogen.</p></article>`;
   window.setTimeout(() => {
     const context = assistantContext();
     const top = cachedQuotes().sort((a, b) => Math.abs(b.changePct || 0) - Math.abs(a.changePct || 0))[0];
