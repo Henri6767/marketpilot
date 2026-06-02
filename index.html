@@ -16,10 +16,9 @@
       <nav class="nav" id="mainNav">
         <a class="active" href="#dashboard">Dashboard</a>
         <a href="#markets">Märkte</a>
-        <a href="#screener">Screener</a>
-        <a href="#briefing">Briefing</a>
-        <a href="#news">News</a>
+        <a href="#analysis">Analyse</a>
         <a href="#watchlist">Watchlist</a>
+        <a href="#news">News</a>
         <a href="#alerts">Alerts</a>
         <a href="#compare">Compare</a>
         <a href="#pro">Pro</a>
@@ -304,12 +303,21 @@
       </section>
 
       <section class="workspace" id="markets">
-        <div class="section-heading">
+        <div class="section-heading markets-view-heading">
           <p class="eyebrow">Märkte</p>
           <h2>Klickbare Market-Matrix mit AI-Einordnung</h2>
           <p>
             Jede Asset-Card zeigt Kurs, Performance, Risiko, AI-Sentiment, Datenquelle und Health-Status. Details öffnen den Chart, Zeiträume und eine nüchterne Markteinordnung.
           </p>
+        </div>
+        <div class="section-heading analysis-view-heading">
+          <p class="eyebrow">Analyse</p>
+          <h2>Chart-first Asset-Konsole</h2>
+          <p>Analysiere das ausgewählte Asset mit Kurs, Zeitraum-Performance, Chart, AI-Einordnung, Kennzahlen, News, Risiko, Notizen und Alarmen.</p>
+          <div class="page-header-actions">
+            <a class="secondary-action" href="#markets">Anderes Asset wählen</a>
+            <button class="primary-action" type="button" data-quick-action="watchlist">Watchlist öffnen</button>
+          </div>
         </div>
 
         <div class="terminal-layout">
@@ -623,6 +631,8 @@
           <button type="button" data-news-filter="Krypto">Krypto</button>
           <button type="button" data-news-filter="watchlist">Nur Watchlist</button>
           <button type="button" data-news-filter="high">Hohe Relevanz</button>
+          <button type="button" data-news-filter="today">Heute</button>
+          <button type="button" data-news-filter="week">Diese Woche</button>
         </div>
         <div class="news-grid" id="newsGrid">
           <article class="news-card" data-news-type="ETF Aktie" data-news-relevance="high" data-news-assets="VOO,QQQ,NVDA,AAPL" tabindex="0">
@@ -815,6 +825,7 @@
             <div class="smart-alert-form">
               <label class="field"><span>Asset</span><input id="smartAlertAsset" type="text" placeholder="Aktiver Fokus" /></label>
               <label class="field"><span>Bedingung</span><input id="smartAlertCondition" type="text" placeholder="z. B. Bewegung über 3 %" /></label>
+              <label class="field"><span>Wert</span><input id="smartAlertValue" type="text" placeholder="z. B. 65000 € oder 3 %" /></label>
             </div>
             <button class="primary-action" id="createSmartAlert" type="button">Smart Alert speichern</button>
             <div class="smart-alerts" id="smartAlertsList"></div>

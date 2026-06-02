@@ -195,6 +195,7 @@ const selectors = {
   smartAlertType: document.querySelector("#smartAlertType"),
   smartAlertAsset: document.querySelector("#smartAlertAsset"),
   smartAlertCondition: document.querySelector("#smartAlertCondition"),
+  smartAlertValue: document.querySelector("#smartAlertValue"),
   createSmartAlert: document.querySelector("#createSmartAlert"),
   smartAlertsList: document.querySelector("#smartAlertsList"),
   briefingScope: document.querySelector("#briefingScope"),
@@ -205,8 +206,38 @@ const selectors = {
   proPreview: document.querySelector("#proPreview")
 };
 
+const VIEW_ALIASES = {
+  dashboard: "dashboard",
+  briefing: "dashboard",
+  home: "dashboard",
+  markets: "markets",
+  screener: "markets",
+  market: "markets",
+  analysis: "analysis",
+  analyse: "analysis",
+  detail: "analysis",
+  watchlist: "watchlist",
+  news: "news",
+  alerts: "alerts",
+  alert: "alerts",
+  compare: "compare",
+  pro: "pro",
+  pricing: "pricing",
+  prices: "pricing",
+  preise: "pricing",
+  legal: "legal"
+};
+
+const PRIMARY_VIEWS = ["dashboard", "markets", "analysis", "watchlist", "news", "alerts", "compare", "pro", "pricing"];
+
+function normalizeView(value = "dashboard") {
+  const clean = String(value || "dashboard").replace("#", "").trim().toLowerCase();
+  return VIEW_ALIASES[clean] || "dashboard";
+}
+
 const state = {
   activeFilter: "Alle",
+  activeView: normalizeView(location.hash),
   activeRange: "1d",
   activeAsset: assets[0],
   quoteCache: new Map(),
@@ -306,6 +337,15 @@ function formatCompactNumber(value) {
     notation: "compact",
     maximumFractionDigits: 1
   }).format(value).replace(/\u00a0/g, " ");
+}
+
+function formatDateTime(value, options = {}) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "Letzter Stand";
+  const config = {};
+  if (options.dateStyle !== false) config.dateStyle = options.dateStyle || "short";
+  if (options.timeStyle !== false) config.timeStyle = options.timeStyle || "short";
+  return new Intl.DateTimeFormat("de-DE", config).format(date).replace(/\u00a0/g, " ");
 }
 
 function trendClass(value) {
@@ -1417,8 +1457,10 @@ function setDetailTab(tab, silent = false) {
 }
 
 function scrollToDetailPanel() {
+  if (state.activeView !== "analysis") setActiveView("analysis", { scroll: false });
   window.requestAnimationFrame(() => {
-    document.querySelector(".detail-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (state.activeView === "analysis") window.scrollTo({ top: 0, behavior: "smooth" });
+    else document.querySelector(".detail-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 }
 
@@ -1445,7 +1487,7 @@ function updateDetailPanels(chart, period) {
   document.querySelector("#assetMetricsDeep").textContent =
     `${mockFundamentals(asset)} Aktueller Kurs: ${formatPrice(price, currency)}. Zeitraum ${state.activeRange.toUpperCase()}: ${formatPercent(period)}. Hoch/Tief: ${highLow(series, currency)}.`;
   document.querySelector("#assetDataQuality").textContent =
-    `Quelle: ${source}. Status: ${healthLabel(health)}. Letztes Update: ${updated.toLocaleString("de-DE")}. Historie: ${series.length} Datenpunkte.`;
+    `Quelle: ${source}. Status: ${healthLabel(health)}. Letztes Update: ${formatDateTime(updated)}. Historie: ${series.length} Datenpunkte.`;
   document.querySelector("#assetNewsDeep").textContent =
     `${asset.name} wird mit ${asset.type === "Krypto" ? "Liquidität, Netzwerkaktivität und Krypto-Sentiment" : asset.type === "ETF" ? "Makrotrends, Sektorbreite und Fondsflüssen" : "Unternehmensdaten, Sektorimpulsen und Analystenstimmung"} verbunden.`;
   document.querySelector("#assetNewsImpact").textContent =
@@ -1468,7 +1510,7 @@ function updateDetail(chart) {
   document.querySelector("#metricHealth").textContent = healthLabel(health);
   document.querySelector("#metricHealth").className = `health-${health}`;
   document.querySelector("#metricSource").textContent = source;
-  document.querySelector("#metricUpdated").textContent = updated.toLocaleString("de-DE");
+  document.querySelector("#metricUpdated").textContent = formatDateTime(updated);
   document.querySelector("#metricPeriodChange").textContent = formatPercent(period);
   document.querySelector("#metricPeriodChange").className = trendClass(period);
   document.querySelector("#metricHighLow").textContent = highLow(series, currency);
@@ -1649,7 +1691,8 @@ function renderNewsFilter(silent = false) {
     const typeMatch = card.dataset.newsType.includes(state.activeNewsFilter);
     const highMatch = state.activeNewsFilter === "high" && card.dataset.newsRelevance === "high";
     const watchlistMatch = state.activeNewsFilter === "watchlist" && saved.some((symbol) => card.dataset.newsAssets.includes(symbol));
-    const visible = state.activeNewsFilter === "all" || typeMatch || highMatch || watchlistMatch;
+    const timeMatch = state.activeNewsFilter === "today" || state.activeNewsFilter === "week";
+    const visible = state.activeNewsFilter === "all" || typeMatch || highMatch || watchlistMatch || timeMatch;
     card.hidden = !visible;
   });
   if (!silent) showToast("News-Filter aktualisiert.");
@@ -1687,21 +1730,52 @@ function focusBriefing(tab) {
   target.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
-function setupActiveNavigation() {
-  const links = [...document.querySelectorAll(".nav a")];
-  const sections = links
-    .map((link) => document.querySelector(link.getAttribute("href")))
-    .filter(Boolean);
-  const observer = new IntersectionObserver((entries) => {
-    const visible = entries
-      .filter((entry) => entry.isIntersecting)
-      .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-    if (!visible) return;
-    links.forEach((link) => {
-      link.classList.toggle("active", link.getAttribute("href") === `#${visible.target.id}`);
+function setActiveView(view, options = {}) {
+  const { push = true, scroll = true } = options;
+  const next = normalizeView(view);
+  state.activeView = next;
+  document.body.classList.add("app-view-mode");
+  document.body.dataset.activeView = next;
+  document.querySelectorAll("main > section").forEach((section) => {
+    const active = next === "dashboard"
+      ? ["dashboard", "briefing"].includes(section.id) || section.classList.contains("dashboard-grid-section")
+      : (next === "analysis" ? section.id === "markets" : section.id === next);
+    section.classList.toggle("is-active-view", active);
+    section.setAttribute("aria-hidden", String(!active));
+  });
+  document.querySelectorAll(".nav a").forEach((link) => {
+    const linkView = normalizeView(link.getAttribute("href"));
+    link.classList.toggle("active", linkView === next);
+  });
+  selectors.mainNav?.classList.remove("open");
+  selectors.mobileMenuButton?.setAttribute("aria-expanded", "false");
+  if (next === "analysis") {
+    setDetailTab("chart", true);
+    window.requestAnimationFrame(() => {
+      const cached = state.chartCache.get(`${state.activeAsset.symbol}:${state.activeRange}`);
+      if (cached) updateDetail(cached);
     });
-  }, { rootMargin: "-25% 0px -60% 0px", threshold: [0.1, 0.35, 0.6] });
-  sections.forEach((section) => observer.observe(section));
+  }
+  if (push) {
+    const nextHash = `#${next}`;
+    if (location.hash !== nextHash) history.pushState(null, "", nextHash);
+  }
+  if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function setupActiveNavigation() {
+  document.body.classList.add("app-view-mode");
+  document.addEventListener("click", (event) => {
+    const link = event.target.closest("a[href^='#']");
+    if (!link) return;
+    const view = normalizeView(link.getAttribute("href"));
+    if (!VIEW_ALIASES[String(link.getAttribute("href")).replace("#", "").toLowerCase()]) return;
+    event.preventDefault();
+    setActiveView(view);
+  });
+  window.addEventListener("hashchange", () => setActiveView(normalizeView(location.hash), { push: false, scroll: false }));
+  window.addEventListener("popstate", () => setActiveView(normalizeView(location.hash), { push: false, scroll: false }));
+  setActiveView(state.activeView, { push: !location.hash, scroll: false });
 }
 
 function renderCompareTray() {
@@ -1988,7 +2062,24 @@ function renderSmartAlerts() {
     selectors.smartAlertsList.innerHTML = `<article><strong>Noch keine Smart Alerts</strong><p>Free: Preisalarme. Pro: Volatilität, News Impact und Trendabweichungen.</p></article>`;
     return;
   }
-  selectors.smartAlertsList.innerHTML = state.smartAlerts.map((alert, index) => `<article><strong>${alert.asset}</strong><p>${alert.type} · ${alert.condition || "Auffällige Bewegung beobachten"}</p><small>${alert.created} · Pro prüft Bewegung, News-Kontext, Risikoänderung und Watchlist-Bezug.</small><button type="button" data-delete-smart-alert="${index}">Löschen</button></article>`).join("");
+  selectors.smartAlertsList.innerHTML = state.smartAlerts.map((alert, index) => {
+    const active = alert.active !== false;
+    const value = alert.value ? ` · Ziel ${escapeHTML(alert.value)}` : "";
+    return `
+      <article>
+        <div class="alert-headline">
+          <strong>${escapeHTML(alert.asset)}</strong>
+          <span class="status-pill ${active ? "live" : "muted"}">${active ? "Aktiv" : "Pausiert"}</span>
+        </div>
+        <p>${escapeHTML(alert.type)} · ${escapeHTML(alert.condition || "Auffällige Bewegung beobachten")}${value}</p>
+        <small>${alert.created} · Pro prüft Bewegung, News-Kontext, Risikoänderung und Watchlist-Bezug.</small>
+        <div class="detail-actions">
+          <button type="button" data-toggle-smart-alert="${index}">${active ? "Pausieren" : "Aktivieren"}</button>
+          <button type="button" data-delete-smart-alert="${index}">Löschen</button>
+        </div>
+      </article>
+    `;
+  }).join("");
 }
 
 function proDashboardHTML(action) {
@@ -2518,26 +2609,29 @@ document.querySelector("#watchlistStarter")?.addEventListener("click", (event) =
 document.querySelector("#dashboardWidgets").addEventListener("click", (event) => {
   const widget = event.target.closest("[data-widget-target]");
   if (!widget) return;
-  document.querySelector(widget.dataset.widgetTarget)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  setActiveView(normalizeView(widget.dataset.widgetTarget));
   showToast("Dashboard-Widget geöffnet.");
 });
 
 selectors.retentionGrid?.addEventListener("click", (event) => {
   const widget = event.target.closest("[data-widget-target]");
   if (!widget) return;
-  document.querySelector(widget.dataset.widgetTarget)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  setActiveView(normalizeView(widget.dataset.widgetTarget));
   showToast("Persönliches Cockpit geöffnet.");
 });
 
 function handleQuickAction(action) {
   if (!action) return;
   if (action === "search") {
-    document.querySelector("#markets").scrollIntoView({ behavior: "smooth", block: "start" });
-    selectors.search.focus();
+    setActiveView("markets");
+    window.setTimeout(() => selectors.search.focus(), 250);
   }
-  if (action === "watchlist") document.querySelector("#watchlist").scrollIntoView({ behavior: "smooth", block: "start" });
-  if (action === "alert") openModal("alert", state.activeAsset);
-  if (action === "compare") document.querySelector("#compare").scrollIntoView({ behavior: "smooth", block: "start" });
+  if (action === "watchlist") setActiveView("watchlist");
+  if (action === "alert") {
+    setActiveView("alerts");
+    openModal("alert", state.activeAsset);
+  }
+  if (action === "compare") setActiveView("compare");
   if (action === "briefing") {
     showToast("Briefing wird neu generiert.");
     window.setTimeout(() => {
@@ -2545,7 +2639,7 @@ function handleQuickAction(action) {
       showToast("Briefing wurde aktualisiert.");
     }, 700);
   }
-  if (action === "news") document.querySelector("#news").scrollIntoView({ behavior: "smooth", block: "start" });
+  if (action === "news") setActiveView("news");
 }
 
 document.querySelectorAll(".quick-actions, .hero-cockpit-grid, .onboarding-steps").forEach((area) => {
@@ -2658,7 +2752,8 @@ document.querySelectorAll(".plan-button").forEach((button) => {
   button.addEventListener("click", () => {
     if (button.dataset.plan === "Pro") {
       if (state.isProUser) {
-        document.querySelector("#proDashboard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        setActiveView("pro");
+        window.setTimeout(() => document.querySelector("#proDashboard")?.scrollIntoView({ behavior: "smooth", block: "start" }), 250);
         runProDashboardAction("assistant");
       } else {
         openCheckout(state.checkoutPlan);
@@ -2692,7 +2787,8 @@ selectors.checkoutAccessCode?.addEventListener("click", () => {
 selectors.completeCheckout?.addEventListener("click", () => {
   if (state.isProUser) {
     closeCheckout();
-    document.querySelector("#proDashboard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setActiveView("pro");
+    window.setTimeout(() => document.querySelector("#proDashboard")?.scrollIntoView({ behavior: "smooth", block: "start" }), 250);
     runProDashboardAction("assistant");
     return;
   }
@@ -2707,6 +2803,7 @@ selectors.completeCheckout?.addEventListener("click", () => {
     selectors.completeCheckout.textContent = "Zum Pro Dashboard";
     selectors.completeCheckout.disabled = false;
     state.checkoutLoading = false;
+    setActiveView("pro");
     showToast("Pro aktiviert");
   }, 900);
 });
@@ -2728,7 +2825,8 @@ function closeAccessModal() {
 selectors.accessCodeButton.addEventListener("click", openAccessModal);
 selectors.openCheckout?.addEventListener("click", () => {
   if (state.isProUser) {
-    document.querySelector("#proDashboard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setActiveView("pro");
+    window.setTimeout(() => document.querySelector("#proDashboard")?.scrollIntoView({ behavior: "smooth", block: "start" }), 250);
     runProDashboardAction("assistant");
   } else {
     openCheckout(state.checkoutPlan);
@@ -2846,10 +2944,10 @@ selectors.riskMap.addEventListener("click", (event) => {
 });
 selectors.generateWatchlistBriefing.addEventListener("click", () => {
   if (!requirePro("Watchlist Briefing", "Pro generiert persönliche Briefings aus Watchlist, News, Risiken und Alarmen.")) return;
-  selectors.watchlistPulseBriefing.textContent = "Briefing wird generiert...";
+  selectors.watchlistPulseBriefing.textContent = "Briefing wird aus Watchlist, Alerts und News Impact erstellt.";
   window.setTimeout(() => {
     const saved = [...state.savedSymbols].map((symbol) => assets.find((asset) => asset.symbol === symbol)).filter(Boolean);
-    selectors.watchlistPulseBriefing.textContent = `${new Date().toLocaleTimeString("de-DE")}: ${saved.length ? saved.map((asset) => asset.name).join(", ") : "Noch keine Watchlist"} geprüft. Fokus: auffällige Bewegung, aktive Alarme, Datenqualität und News Impact. Keine Anlageberatung.`;
+    selectors.watchlistPulseBriefing.textContent = `${formatDateTime(new Date(), { dateStyle: false, timeStyle: "short" })}: ${saved.length ? saved.map((asset) => asset.name).join(", ") : "Noch keine Watchlist"} geprüft. Fokus: auffällige Bewegung, aktive Alarme, Datenqualität und News Impact. Keine Anlageberatung.`;
   }, 650);
 });
 selectors.createSmartAlert.addEventListener("click", () => {
@@ -2857,13 +2955,25 @@ selectors.createSmartAlert.addEventListener("click", () => {
   if (type !== "price" && !requirePro("Smart Alerts", "Pro schaltet Volatilitäts-, News-Impact- und Trendalarme frei.")) return;
   const assetName = selectors.smartAlertAsset.value.trim() || state.activeAsset.name;
   const condition = selectors.smartAlertCondition.value.trim() || "Auffällige Bewegung beobachten";
-  state.smartAlerts.unshift({ asset: assetName, type, condition, created: new Date().toLocaleString("de-DE") });
+  const value = selectors.smartAlertValue?.value.trim() || "";
+  state.smartAlerts.unshift({ asset: assetName, type, condition, value, active: true, created: formatDateTime(new Date()) });
   saveSmartAlerts();
   renderSmartAlerts();
   selectors.smartAlertCondition.value = "";
+  if (selectors.smartAlertValue) selectors.smartAlertValue.value = "";
   showToast("Smart Alert gespeichert.");
 });
 selectors.smartAlertsList.addEventListener("click", (event) => {
+  const toggle = event.target.closest("[data-toggle-smart-alert]");
+  if (toggle) {
+    const alert = state.smartAlerts[Number(toggle.dataset.toggleSmartAlert)];
+    if (!alert) return;
+    alert.active = alert.active === false;
+    saveSmartAlerts();
+    renderSmartAlerts();
+    showToast(alert.active ? "Smart Alert aktiviert." : "Smart Alert pausiert.");
+    return;
+  }
   const del = event.target.closest("[data-delete-smart-alert]");
   if (!del) return;
   state.smartAlerts.splice(Number(del.dataset.deleteSmartAlert), 1);
@@ -2873,13 +2983,13 @@ selectors.smartAlertsList.addEventListener("click", (event) => {
 selectors.generatePremiumBriefing.addEventListener("click", () => {
   if (!requirePro("AI Briefing Generator", "Pro erstellt fokussierte Briefings für Markt, Watchlist, ETFs, Krypto oder hohe Relevanz.")) return;
   const scope = selectors.briefingScope.value;
-  selectors.generatedBriefing.innerHTML = `<article><strong>Briefing wird generiert...</strong><p>Scope: ${scope}</p></article>`;
+  selectors.generatedBriefing.innerHTML = `<article><strong>Briefing wird erstellt</strong><p>Fokus: ${scope}. Datenstatus, Watchlist und News Impact werden einbezogen.</p></article>`;
   window.setTimeout(() => {
     const context = assistantContext();
     const top = cachedQuotes().sort((a, b) => Math.abs(b.changePct || 0) - Math.abs(a.changePct || 0))[0];
     selectors.generatedBriefing.innerHTML = `
       <article>
-        <strong>${new Date().toLocaleString("de-DE")}: Pro Briefing</strong>
+        <strong>${formatDateTime(new Date())}: Pro Briefing</strong>
         <p><b>Kurzfazit:</b> ${scope}: Marktstimmung ${document.querySelector("#widgetSentiment").textContent}. Top Bewegung ${top ? `${top.asset.name} ${formatPercent(top.changePct)}` : document.querySelector("#widgetTopMover").textContent}.</p>
         <p><b>Watchlist-Hinweise:</b> ${context.watchlist.length ? context.watchlist.slice(0, 5).map((asset) => asset.symbol).join(", ") : "Noch keine Watchlist. Werte hinzufügen, um persönliche Signale zu erhalten."}</p>
         <p><b>Risiken:</b> ${document.querySelector("#widgetRisk").textContent}. Prüfe Volatilität, News Impact, offene Alerts und Datenqualität.</p>
@@ -2928,7 +3038,7 @@ selectors.chart.addEventListener("mousemove", (event) => {
   selectors.chartTooltip.style.left = `${Math.min(rect.width - 190, Math.max(8, x + 14))}px`;
   selectors.chartTooltip.style.top = `${Math.max(8, event.clientY - rect.top - 42)}px`;
   selectors.chartTooltip.innerHTML = `
-    ${new Date(point.time).toLocaleString("de-DE", { dateStyle: "short", timeStyle: state.activeRange === "1d" ? "short" : undefined })}<br>
+    ${formatDateTime(point.time, { dateStyle: "short", timeStyle: state.activeRange === "1d" ? "short" : false })}<br>
     <b>${formatPrice(point.value, chart.currency)}</b><br>
     <span class="${trendClass(move)}">${formatPercent(move)}</span>${point.volume ? `<br>Volumen ${formatCompactNumber(point.volume)}` : ""}
   `;
