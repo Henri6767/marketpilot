@@ -3142,6 +3142,61 @@ body::after {
   height: 42px;
   border-radius: 13px;
   box-shadow: 0 0 24px rgba(247, 207, 114, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  position: relative;
+  overflow: hidden;
+  color: transparent;
+  font-size: 0;
+}
+
+.feature-icon::before,
+.feature-icon::after {
+  content: "";
+  position: absolute;
+  inset: 11px;
+  border: 2px solid rgba(4, 16, 21, 0.82);
+  border-radius: 999px;
+}
+
+.feature-icon::after {
+  inset: 18px;
+  border: 0;
+  background: rgba(4, 16, 21, 0.9);
+  box-shadow: 0 0 0 7px rgba(4, 16, 21, 0.12);
+}
+
+.premium-card[data-feature-card="Market Radar"] .feature-icon::before,
+.premium-card[data-feature-card="Risk Map"] .feature-icon::before {
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 5px rgba(4, 16, 21, 0.16);
+}
+
+.premium-card[data-feature-card="Watchlist Pulse"] .feature-icon::before {
+  border-radius: 3px;
+  transform: rotate(45deg);
+}
+
+.premium-card[data-feature-card="News Impact Scanner"] .feature-icon::before {
+  border-radius: 999px 999px 2px 2px;
+}
+
+.premium-card[data-feature-card="Compare Battle"] .feature-icon::before {
+  border-radius: 2px;
+  box-shadow: inset 10px 0 0 rgba(4, 16, 21, 0.82);
+}
+
+.premium-card[data-feature-card="Smart Alerts"] .feature-icon::before {
+  border-radius: 999px;
+  clip-path: polygon(50% 0, 92% 82%, 8% 82%);
+}
+
+.premium-card[data-feature-card="AI Briefing Generator"] .feature-icon::before {
+  border-radius: 7px;
+  transform: rotate(45deg);
+}
+
+.premium-card[data-feature-card="Confidence"] .feature-icon::before {
+  border-radius: 999px;
+  border-style: dashed;
 }
 
 .is-free .premium-card.requires-pro::before {
@@ -4936,6 +4991,217 @@ section,
     width: calc(100vw - 24px);
     max-height: calc(100vh - 24px);
     overflow: auto;
+  }
+}
+
+/* Multi-tier subscription system */
+.pricing-toolbar,
+.account-plan-panel,
+.plan-fit-panel {
+  position: relative;
+  overflow: hidden;
+  margin: 24px auto;
+  padding: 20px;
+  max-width: 1180px;
+  border: 1px solid rgba(144, 232, 255, 0.16);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(53, 243, 255, 0.08), rgba(138, 99, 255, 0.06)), rgba(7, 12, 20, 0.74);
+  box-shadow: var(--nexus-shadow);
+}
+
+.pricing-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.subscription-grid {
+  grid-template-columns: repeat(5, minmax(210px, 1fr));
+  align-items: stretch;
+  gap: 16px;
+}
+
+.pricing-plan {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid rgba(144, 232, 255, 0.15);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03)), rgba(7, 12, 20, 0.82);
+  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.24);
+  transition: transform var(--nexus-transition), border-color var(--nexus-transition), box-shadow var(--nexus-transition);
+}
+
+.pricing-plan:hover {
+  transform: translateY(-3px);
+  border-color: rgba(53, 243, 255, 0.36);
+}
+
+.pricing-plan.sweet-spot {
+  border-color: rgba(53, 243, 255, 0.46);
+  box-shadow: 0 0 0 1px rgba(53, 243, 255, 0.2), 0 26px 84px rgba(53, 243, 255, 0.12);
+}
+
+.pricing-plan.elite-plan {
+  border-color: rgba(247, 207, 114, 0.52);
+  box-shadow: 0 0 0 1px rgba(247, 207, 114, 0.18), 0 28px 90px rgba(247, 207, 114, 0.13);
+}
+
+.pricing-plan.active-plan {
+  border-color: rgba(97, 223, 145, 0.52);
+}
+
+.plan-topline,
+.account-plan-metrics,
+.plan-price {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.plan-badge,
+.saving-badge,
+.plan-note {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  color: #061017;
+  background: linear-gradient(135deg, var(--nexus-cyan), var(--nexus-blue));
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.plan-elite .plan-badge,
+.elite-plan .plan-badge {
+  background: linear-gradient(135deg, var(--nexus-pro), var(--nexus-cyan));
+}
+
+.plan-price {
+  align-items: flex-end;
+}
+
+.plan-price strong {
+  color: #fff;
+  font-size: clamp(1.8rem, 2.2vw, 2.55rem);
+  line-height: 1;
+}
+
+.plan-features,
+.plan-more ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 18px;
+  color: #c7d7ea;
+}
+
+.plan-more {
+  margin-top: auto;
+  color: #9fb3c8;
+}
+
+.plan-more summary {
+  cursor: pointer;
+  color: var(--nexus-cyan);
+  font-weight: 900;
+}
+
+.plan-fit-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.plan-fit-grid button {
+  min-height: 142px;
+  padding: 16px;
+  text-align: left;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(144, 232, 255, 0.14);
+  border-radius: 14px;
+}
+
+.plan-fit-grid span {
+  display: inline-flex;
+  margin: 8px 0;
+  color: var(--nexus-cyan);
+  font-weight: 900;
+}
+
+.plan-fit-result {
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(53, 243, 255, 0.07);
+  border: 1px solid rgba(53, 243, 255, 0.16);
+}
+
+.account-plan-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 18px;
+}
+
+.account-plan-metrics {
+  flex-wrap: wrap;
+}
+
+.account-plan-metrics span {
+  min-width: 116px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.055);
+  color: #c7d7ea;
+}
+
+.subscription-compare {
+  max-width: 1180px;
+  margin: 28px auto 0;
+  overflow-x: auto;
+}
+
+.subscription-compare .highlight-plan {
+  color: #fff;
+  background: rgba(53, 243, 255, 0.06);
+}
+
+@media (max-width: 1180px) {
+  .subscription-grid {
+    grid-template-columns: repeat(2, minmax(260px, 1fr));
+  }
+
+  .plan-fit-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .account-plan-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .pricing-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .subscription-grid,
+  .plan-fit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .subscription-compare table {
+    min-width: 760px;
   }
 }
 

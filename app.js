@@ -263,13 +263,15 @@ const state = {
   lastVisit: localStorage.getItem("marketpilot-last-visit") || null,
   renderQueued: false,
   hydrationQueued: false,
-  isProUser: localStorage.getItem("marketpilot-pro") === "true" || localStorage.getItem("isProUser") === "true",
+  currentPlan: localStorage.getItem("marketpilot-current-plan") || (localStorage.getItem("marketpilot-pro") === "true" || localStorage.getItem("isProUser") === "true" ? "pro" : "free"),
+  isProUser: ["pro", "elite", "business"].includes(localStorage.getItem("marketpilot-current-plan") || (localStorage.getItem("marketpilot-pro") === "true" || localStorage.getItem("isProUser") === "true" ? "pro" : "free")),
   assistantMessages: JSON.parse(localStorage.getItem("marketpilot-assistant") || "[]"),
   assistantDaily: JSON.parse(localStorage.getItem("marketpilot-assistant-daily") || "{}"),
   marketRadarFilter: "Alle",
   smartAlerts: JSON.parse(localStorage.getItem("marketpilot-smart-alerts") || "[]"),
   proAccessMethod: localStorage.getItem("marketpilot-pro-method") || localStorage.getItem("proAccessMethod") || "",
   checkoutPlan: localStorage.getItem("selectedBillingCycle") || localStorage.getItem("marketpilot-billing-cycle") || localStorage.getItem("marketpilot-checkout-plan") || "monthly",
+  checkoutTargetPlan: "pro",
   checkoutLoading: false
 };
 
@@ -278,12 +280,105 @@ localStorage.setItem("marketpilot-last-visit", new Date().toISOString());
 const isLocalHttp = location.protocol.startsWith("http") && ["127.0.0.1", "localhost", "::1"].includes(location.hostname);
 
 const ACCESS_CONFIG = {
-  validDemoCodes: ["67tz-OiL9-009K-Pokl-AqQq-U76i-KNml"]
+  codes: {
+    "67tz-OiL9-009K-Pokl-AqQq-U76i-KNml": { plan: "elite", label: "Nexus Master Code" }
+  }
+};
+
+const PLAN_ORDER = ["free", "starter", "pro", "elite", "business"];
+
+const PLAN_CONFIG = {
+  free: {
+    name: "Free",
+    badge: "Einstieg",
+    monthly: "0 €",
+    yearly: "0 €",
+    priceMonthly: "0 € pro Monat",
+    priceYearly: "0 € pro Jahr",
+    audience: "Für den Einstieg und erste Marktüberblicke.",
+    cta: "Kostenlos starten",
+    accent: "free",
+    aiLimit: 3,
+    watchlistLimit: 3,
+    alertLimit: 1,
+    compareLimit: 0,
+    features: ["Basis-Dashboard", "3 Watchlist-Werte", "3 AI-Fragen pro Tag", "Basis-Marktbriefing", "Basis-News", "1 einfacher Preisalarm"],
+    hiddenFeatures: ["Begrenzter Screener", "Live-/Cache-Datenstatus", "Kein Export", "Kein Deep Dive", "Keine Smart Alerts Pro"]
+  },
+  starter: {
+    name: "Starter",
+    badge: "Günstig",
+    monthly: "4,99 €",
+    yearly: "49,99 €",
+    priceMonthly: "4,99 € pro Monat",
+    priceYearly: "49,99 € pro Jahr",
+    audience: "Für kleine Watchlists und regelmäßige Marktchecks.",
+    cta: "Starter wählen",
+    accent: "starter",
+    aiLimit: 10,
+    watchlistLimit: 10,
+    alertLimit: 5,
+    compareLimit: 2,
+    features: ["10 Watchlist-Werte", "10 AI-Fragen pro Tag", "Basis-Watchlist-Briefing", "5 aktive Preisalarme", "Basis-News Impact", "Compare mit 2 Assets"],
+    hiddenFeatures: ["Basis-Kennzahlen", "Learning Layer Basis", "Keine Reports", "Keine Deep Asset Analysis", "Keine erweiterten Smart Alerts"]
+  },
+  pro: {
+    name: "Pro",
+    badge: "Beliebt",
+    monthly: "12,99 €",
+    yearly: "119,99 €",
+    priceMonthly: "12,99 € pro Monat",
+    priceYearly: "119,99 € pro Jahr",
+    audience: "Für Nutzer, die ihre Watchlist täglich verstehen wollen.",
+    cta: "Pro kaufen",
+    accent: "pro",
+    aiLimit: Infinity,
+    watchlistLimit: Infinity,
+    alertLimit: 25,
+    compareLimit: 4,
+    features: ["Unbegrenzter AI Assistant", "Watchlist Pulse", "AI Watchlist Briefing", "Smart Alerts", "News Impact für Watchlist", "Deep Asset Analysis"],
+    hiddenFeatures: ["Compare Battle bis 4 Assets", "Confidence Score", "Erweiterte Kennzahlen", "Asset Notes", "Mehr Historie", "Report Preview"]
+  },
+  elite: {
+    name: "Elite",
+    badge: "Max Power",
+    monthly: "24,99 €",
+    yearly: "239,99 €",
+    priceMonthly: "24,99 € pro Monat",
+    priceYearly: "239,99 € pro Jahr",
+    audience: "Für Power-User mit maximaler AI, Reports und Analyse.",
+    cta: "Elite kaufen",
+    accent: "elite",
+    aiLimit: Infinity,
+    watchlistLimit: Infinity,
+    alertLimit: Infinity,
+    compareLimit: 6,
+    features: ["Alles aus Pro", "Advanced AI Assistant", "Watchlist Health Score", "Advanced Smart Alerts", "AI Risiko-Scoring", "PDF/CSV Export Preview"],
+    hiddenFeatures: ["Gespeicherte Reports", "Advanced News Impact", "Scenario Analysis", "Advanced Compare", "Early Access Labs", "Mehr historische Zeiträume"]
+  },
+  business: {
+    name: "Business",
+    badge: "Teams",
+    monthly: "ab 49,99 €",
+    yearly: "ab 499 €",
+    priceMonthly: "ab 49,99 € pro Monat",
+    priceYearly: "ab 499 € pro Jahr",
+    audience: "Für Teams, API, Reports und professionelle Workflows.",
+    cta: "Kontakt aufnehmen",
+    accent: "business",
+    aiLimit: Infinity,
+    watchlistLimit: Infinity,
+    alertLimit: Infinity,
+    compareLimit: Infinity,
+    features: ["Alles aus Elite", "Team-Dashboard", "Mehrere Nutzer", "Admin-Bereich", "Team-Watchlists", "API-Zugang vorbereitet"],
+    hiddenFeatures: ["Team Reports", "CSV/PDF-Export", "White-Label optional", "Compliance-Hinweise", "Priorisierter Support", "Individuelle Datenquellen"]
+  }
 };
 
 async function validateAccessCode(code) {
   // Later this can become: return fetch("/api/access/validate", { method: "POST", body: JSON.stringify({ code }) });
-  return ACCESS_CONFIG.validDemoCodes.includes(code);
+  const access = ACCESS_CONFIG.codes[code];
+  return access ? { valid: true, ...access } : { valid: false };
 }
 
 function bootInterfaceEffects() {
@@ -423,6 +518,52 @@ function showToast(message) {
   window.setTimeout(() => toast.remove(), 3200);
 }
 
+function normalizePlan(plan) {
+  const key = String(plan || "free").toLowerCase();
+  return PLAN_CONFIG[key] ? key : "free";
+}
+
+function planRank(plan) {
+  return PLAN_ORDER.indexOf(normalizePlan(plan));
+}
+
+function hasPlan(requiredPlan) {
+  return planRank(state.currentPlan) >= planRank(requiredPlan);
+}
+
+function currentPlanConfig() {
+  return PLAN_CONFIG[normalizePlan(state.currentPlan)];
+}
+
+function syncPlanFlags() {
+  state.currentPlan = normalizePlan(state.currentPlan);
+  state.isProUser = hasPlan("pro");
+}
+
+function planLimitLabel(value) {
+  return value === Infinity ? "Unbegrenzt" : String(value);
+}
+
+function planPrice(plan, cycle = state.checkoutPlan) {
+  const config = PLAN_CONFIG[normalizePlan(plan)];
+  return cycle === "yearly" ? config.priceYearly : config.priceMonthly;
+}
+
+function openUpgradeModal(requiredPlan, feature, benefit = "") {
+  const plan = PLAN_CONFIG[normalizePlan(requiredPlan)];
+  state.checkoutTargetPlan = normalizePlan(requiredPlan);
+  openModal("pro", state.activeAsset, {
+    feature: `${plan.name} erforderlich`,
+    benefit: `${feature}: ${benefit || plan.audience} Empfohlener Plan: ${plan.name}.`
+  });
+}
+
+function requirePlan(requiredPlan, feature, benefit) {
+  if (hasPlan(requiredPlan)) return true;
+  openUpgradeModal(requiredPlan, feature, benefit);
+  return false;
+}
+
 function saveCompare() {
   localStorage.setItem("marketpilot-compare", JSON.stringify([...state.compareSymbols]));
 }
@@ -444,6 +585,8 @@ function saveLastViewed() {
 }
 
 function saveProState() {
+  syncPlanFlags();
+  localStorage.setItem("marketpilot-current-plan", state.currentPlan);
   localStorage.setItem("marketpilot-pro", String(state.isProUser));
   localStorage.setItem("marketpilot-pro-method", state.proAccessMethod || "");
   localStorage.setItem("marketpilot-billing-cycle", state.checkoutPlan || "monthly");
@@ -453,14 +596,20 @@ function saveProState() {
   localStorage.setItem("selectedBillingCycle", state.checkoutPlan || "monthly");
 }
 
-function activatePro(method) {
-  state.isProUser = true;
+function activatePlan(plan, method) {
+  state.currentPlan = normalizePlan(plan);
+  syncPlanFlags();
   state.proAccessMethod = method;
   saveProState();
   updateProUI();
+  renderPricing();
   renderPremiumModules();
   document.body.classList.add("pro-just-activated");
   window.setTimeout(() => document.body.classList.remove("pro-just-activated"), 1600);
+}
+
+function activatePro(method) {
+  activatePlan("pro", method);
 }
 
 function saveAssistant() {
@@ -482,35 +631,37 @@ function todayKey() {
 }
 
 function remainingAssistantQuestions() {
-  if (state.isProUser) return "∞";
+  const limit = currentPlanConfig().aiLimit;
+  if (limit === Infinity) return "∞";
   const used = state.assistantDaily[todayKey()] || 0;
-  return Math.max(0, 3 - used);
+  return Math.max(0, limit - used);
 }
 
 function requirePro(feature, benefit) {
-  if (state.isProUser) return true;
-  openModal("pro", state.activeAsset, { feature, benefit });
-  return false;
+  return requirePlan("pro", feature, benefit);
 }
 
 function updateProUI() {
+  syncPlanFlags();
   document.body.classList.toggle("is-pro", state.isProUser);
   document.body.classList.toggle("is-free", !state.isProUser);
+  document.body.dataset.currentPlan = state.currentPlan;
+  const plan = currentPlanConfig();
   const methodLabel = state.proAccessMethod === "code" ? "Per Nexus Code aktiviert." : state.proAccessMethod === "purchase" ? "Per Kauf-Flow aktiviert." : "";
-  document.querySelector("#proStatusLabel").textContent = state.isProUser ? "Pro aktiv" : "Free";
+  document.querySelector("#proStatusLabel").textContent = `${plan.name} aktiv`;
   document.querySelector("#proStatusText").textContent = state.isProUser
-    ? "Power-Modus aktiv: Assistant, Smart Alerts, Briefings, News Impact und Deep Dives sind freigeschaltet."
-    : "Free: 3 AI-Fragen pro Tag, Basis-Insights und elegante Pro-Vorschau.";
-  selectors.accessCodeButton.textContent = state.isProUser ? "Pro aktiv" : "Nexus Code";
-  if (selectors.navProStatus) selectors.navProStatus.textContent = state.isProUser ? "Pro aktiv" : "Free";
+    ? `${plan.name}: ${plan.audience} ${methodLabel}`
+    : "Free: 3 AI-Fragen pro Tag, 3 Watchlist-Werte und Basis-Marktbriefing.";
+  selectors.accessCodeButton.textContent = state.isProUser ? `${plan.name} aktiv` : "Nexus Code";
+  if (selectors.navProStatus) selectors.navProStatus.textContent = `${plan.name}`;
   selectors.openAccessModal.textContent = state.isProUser ? "Code verwalten" : "Code einlösen";
   if (selectors.openCheckout) selectors.openCheckout.textContent = state.isProUser ? "Pro Dashboard öffnen" : "Pro kaufen";
   selectors.openAccessModal.setAttribute("aria-pressed", String(state.isProUser));
-  if (selectors.proPlanButton) selectors.proPlanButton.textContent = state.isProUser ? "Pro Dashboard öffnen" : "Pro kaufen";
-  if (selectors.proPlanBadge) selectors.proPlanBadge.textContent = state.isProUser ? "PRO AKTIV" : "PRO";
+  if (selectors.proPlanButton) selectors.proPlanButton.textContent = hasPlan("pro") ? "Pro Dashboard öffnen" : "Pro kaufen";
+  if (selectors.proPlanBadge) selectors.proPlanBadge.textContent = hasPlan("pro") ? "PRO AKTIV" : "POWER-MODUS";
   if (selectors.proPlanStatusNote) {
     selectors.proPlanStatusNote.hidden = !state.isProUser;
-    selectors.proPlanStatusNote.textContent = state.isProUser ? `Dein Pro-Zugang ist aktiv. ${methodLabel}`.trim() : "";
+    selectors.proPlanStatusNote.textContent = state.isProUser ? `Dein Pro-Zugang ist aktiv. ${methodLabel}`.trim() : "Für Nutzer, die ihre Watchlist täglich verstehen wollen.";
   }
   if (selectors.pricingAccessCode) selectors.pricingAccessCode.hidden = state.isProUser;
   if (selectors.proPriceLabel) selectors.proPriceLabel.textContent = state.checkoutPlan === "yearly" ? "119,99 €" : "12,99 €";
@@ -518,7 +669,7 @@ function updateProUI() {
   selectors.resetDemoAccessLegal.hidden = true;
   selectors.assistantQuota.textContent = remainingAssistantQuestions();
   if (selectors.assistantLimit) {
-    selectors.assistantLimit.textContent = state.isProUser ? "Pro aktiv · unbegrenzte Fragen" : `${remainingAssistantQuestions()}/3 Free-Fragen übrig`;
+    selectors.assistantLimit.textContent = plan.aiLimit === Infinity ? `Plan: ${plan.name} · unbegrenzte Fragen` : `Plan: ${plan.name} · ${remainingAssistantQuestions()}/${plan.aiLimit} Fragen übrig`;
   }
   if (selectors.assistantContextLine) {
     const quote = state.quoteCache.get(state.activeAsset.symbol);
@@ -536,8 +687,8 @@ function updateProUI() {
     selectors.assistantContextLine.textContent = `${viewLabel} · ${rangeLabel(state.activeRange)} · Risiko ${state.activeAsset.risk} · ${healthLabel(quote?.health)}`;
   }
   selectors.assistantAccessText.textContent = state.isProUser
-    ? "Pro: unbegrenzte Fragen mit Watchlist-, News- und Risikoanalyse."
-    : `Free: noch ${remainingAssistantQuestions()} AI-Fragen heute. Pro schaltet unbegrenzte Analysen frei.`;
+    ? `${plan.name}: AI nutzt Watchlist-, News-, Compare- und Risiko-Kontext.`
+    : `Free: noch ${remainingAssistantQuestions()} AI-Fragen heute. Starter erhöht das Limit, Pro schaltet unbegrenzte Analysen frei.`;
   document.querySelectorAll("[data-pro-copy]").forEach((item) => {
     item.textContent = state.isProUser ? "Pro aktiv" : item.dataset.proCopy || "Pro";
   });
@@ -560,40 +711,161 @@ function updateAssistantSuggestions() {
   selectors.assistantSuggestions.innerHTML = prompts.map((prompt) => `<button type="button" data-question="${escapeHTML(prompt)}">${escapeHTML(prompt)}</button>`).join("");
 }
 
+function planButtonLabel(plan) {
+  const key = normalizePlan(plan);
+  if (key === state.currentPlan) return "Aktueller Plan";
+  if (key === "business") return hasPlan("business") ? "Plan verwalten" : "Kontakt aufnehmen";
+  if (planRank(key) > planRank(state.currentPlan)) return key === "starter" ? "Starter wählen" : `Upgrade auf ${PLAN_CONFIG[key].name}`;
+  return "Plan verwalten";
+}
+
+function renderPricing() {
+  const section = document.querySelector("#pricing");
+  if (!section) return;
+  const cycle = state.checkoutPlan === "yearly" ? "yearly" : "monthly";
+  const plans = PLAN_ORDER.map((key) => {
+    const plan = PLAN_CONFIG[key];
+    const active = key === state.currentPlan;
+    const lower = planRank(key) < planRank(state.currentPlan);
+    const price = cycle === "yearly" ? plan.yearly : plan.monthly;
+    const period = key === "business" ? (cycle === "yearly" ? "pro Jahr" : "pro Monat") : (cycle === "yearly" ? "pro Jahr" : "pro Monat");
+    return `
+      <article class="pricing-plan plan-${plan.accent} ${active ? "active-plan" : ""} ${key === "pro" ? "sweet-spot" : ""} ${key === "elite" ? "elite-plan" : ""}">
+        <div class="plan-topline">
+          <span class="plan-name">${escapeHTML(plan.name)}</span>
+          <span class="plan-badge">${active ? "Aktuell" : escapeHTML(plan.badge)}</span>
+        </div>
+        <p>${escapeHTML(plan.audience)}</p>
+        <div class="plan-price">
+          <strong>${escapeHTML(price)}</strong>
+          <span>${escapeHTML(period)}</span>
+        </div>
+        ${cycle === "yearly" && key !== "free" ? `<span class="saving-badge">2 Monate sparen</span>` : ""}
+        <ul class="plan-features">
+          ${plan.features.map((feature) => `<li>${escapeHTML(feature)}</li>`).join("")}
+        </ul>
+        <details class="plan-more">
+          <summary>Alle Vorteile anzeigen</summary>
+          <ul>${plan.hiddenFeatures.map((feature) => `<li>${escapeHTML(feature)}</li>`).join("")}</ul>
+        </details>
+        <button class="${key === "pro" || key === "elite" ? "primary-action" : "secondary-action"} plan-button" type="button" data-plan-key="${key}" ${active ? "aria-pressed=\"true\"" : ""}>${escapeHTML(planButtonLabel(key))}</button>
+        ${lower ? `<small class="plan-note">In deinem aktuellen Plan enthalten.</small>` : ""}
+      </article>
+    `;
+  }).join("");
+  const compareRows = [
+    ["Watchlist", "3 Werte", "10 Werte", "Unbegrenzt", "Unbegrenzt + Gruppen", "Team-Watchlists"],
+    ["AI Assistant", "Kurz", "Basis-Kontext", "Unbegrenzt", "Advanced AI", "Team-Kontext"],
+    ["AI-Fragen pro Tag", "3", "10", "Unbegrenzt", "Unbegrenzt", "Team-Limits"],
+    ["Briefing", "Basis", "Watchlist-Basis", "AI Watchlist Briefing", "Saved Briefings", "Team Reports"],
+    ["News Impact", "Basis-News", "Basis-Impact", "Watchlist-Impact", "Advanced Impact", "API-/Team-Impact"],
+    ["Alerts", "1 Preisalarm", "5 Preisalarme", "25 Smart Alerts", "Advanced Alerts", "Team Alerts"],
+    ["Deep Asset Analysis", "Nein", "Basis-Kennzahlen", "Aktien/ETF/Krypto", "Advanced", "Team-Workflows"],
+    ["Compare", "Nein", "2 Assets", "4 Assets", "Advanced Compare", "Team Compare"],
+    ["Reports", "Nein", "Nein", "Preview", "PDF/CSV Preview", "Team Reports"],
+    ["API", "Nein", "Nein", "Nein", "Nein", "Vorbereitet"],
+    ["Support", "Community", "Basis", "Priorisiert", "Early Access", "Priorisiert"]
+  ];
+  section.innerHTML = `
+    <div class="section-heading">
+      <p class="eyebrow">Preise</p>
+      <h2>Starte kostenlos. Skaliere dein AI-Finance-Cockpit nach Bedarf.</h2>
+      <p>Free zum Testen, Starter für kleine Watchlists, Pro als Sweet Spot, Elite für Power-User und Business für Teams.</p>
+    </div>
+    <div class="pricing-toolbar">
+      <div>
+        <span class="panel-label">Abrechnung</span>
+        <strong>${cycle === "yearly" ? "Jährlich · 2 Monate sparen" : "Monatlich flexibel"}</strong>
+      </div>
+      <div class="billing-toggle pricing-cycle-toggle" role="tablist" aria-label="Pricing-Abrechnung">
+        <button class="${cycle === "monthly" ? "active" : ""}" type="button" data-pricing-cycle="monthly">Monatlich</button>
+        <button class="${cycle === "yearly" ? "active" : ""}" type="button" data-pricing-cycle="yearly">Jährlich <span>2 Monate sparen</span></button>
+      </div>
+    </div>
+    <div class="pricing-grid subscription-grid">${plans}</div>
+    <section class="plan-fit-panel" aria-label="Welcher Plan passt zu dir?">
+      <div class="section-heading compact">
+        <p class="eyebrow">Plan-Finder</p>
+        <h2>Welcher Plan passt zu dir?</h2>
+      </div>
+      <div class="plan-fit-grid">
+        ${[
+          ["Nur testen", "Free", "Basis-Dashboard und erste AI-Fragen."],
+          ["Kleine Watchlist", "Starter", "10 Werte, 10 AI-Fragen und Preisalarme."],
+          ["Täglich verstehen", "Pro", "Watchlist Intelligence, Smart Alerts und Deep Dives."],
+          ["Maximale Analyse", "Elite", "Advanced AI, Reports, Export und Scenario Analysis."],
+          ["Team/API", "Business", "Team-Dashboard, API und professionelle Reports."]
+        ].map(([need, plan, text]) => `<button type="button" data-plan-fit="${plan.toLowerCase()}"><strong>${need}</strong><span>${plan}</span><p>${text}</p></button>`).join("")}
+      </div>
+      <div class="plan-fit-result" id="planFitResult">Wähle ein Ziel, um eine Empfehlung zu erhalten.</div>
+    </section>
+    <section class="account-plan-panel">
+      <div>
+        <span class="panel-label">Account & Plan</span>
+        <h3>${escapeHTML(currentPlanConfig().name)} aktiv</h3>
+        <p>Billing: ${cycle === "yearly" ? "Jährlich" : "Monatlich"} · Zugang: ${state.proAccessMethod || "Free"} · AI-Fragen heute: ${remainingAssistantQuestions()}</p>
+      </div>
+      <div class="account-plan-metrics">
+        <span>Watchlist <b>${planLimitLabel(currentPlanConfig().watchlistLimit)}</b></span>
+        <span>Alerts <b>${planLimitLabel(currentPlanConfig().alertLimit)}</b></span>
+        <span>Compare <b>${planLimitLabel(currentPlanConfig().compareLimit)}</b></span>
+      </div>
+      <div class="detail-actions">
+        <button class="primary-action" type="button" data-plan-key="${state.currentPlan === "free" ? "pro" : state.currentPlan}">${state.currentPlan === "free" ? "Upgrade" : "Plan verwalten"}</button>
+        <button class="secondary-action" type="button" data-open-pricing-code>Nexus Code einlösen</button>
+      </div>
+    </section>
+    <div class="pricing-compare subscription-compare">
+      <table>
+        <thead><tr><th>Feature</th>${PLAN_ORDER.map((key) => `<th class="${key === "pro" || key === "elite" ? "highlight-plan" : ""}">${PLAN_CONFIG[key].name}</th>`).join("")}</tr></thead>
+        <tbody>${compareRows.map((row) => `<tr>${row.map((cell, index) => `<td class="${index === 3 || index === 4 ? "highlight-plan" : ""}">${escapeHTML(cell)}</td>`).join("")}</tr>`).join("")}</tbody>
+      </table>
+    </div>
+  `;
+}
+
 function checkoutPriceCopy() {
-  if (state.checkoutPlan === "yearly") {
-    return {
-      price: "119,99 € pro Jahr",
-      subline: "Jährlich zahlen und 2 Monate sparen. Pro wird nach Abschluss sofort aktiviert."
-    };
-  }
+  const target = PLAN_CONFIG[normalizePlan(state.checkoutTargetPlan)];
+  if (state.checkoutPlan === "yearly") return { price: target.priceYearly, subline: "Jährlich zahlen und 2 Monate sparen. Plan wird nach Abschluss sofort aktiviert." };
   return {
-    price: "12,99 € monatlich",
-    subline: "Monatlich kündbar. Pro wird nach Abschluss sofort aktiviert."
+    price: target.priceMonthly,
+    subline: "Monatlich flexibel. Plan wird nach Abschluss sofort aktiviert."
   };
 }
 
 function updateCheckoutUI() {
+  const target = PLAN_CONFIG[normalizePlan(state.checkoutTargetPlan)];
   const copy = checkoutPriceCopy();
+  document.querySelector("#checkoutTitle").textContent = `${target.name} starten`;
+  document.querySelector(".checkout-copy").textContent = target.audience;
+  document.querySelector(".checkout-summary .panel-label").textContent = "Dein Plan";
+  document.querySelector(".checkout-summary p").textContent = `MarketPilot Nexus ${target.name}`;
   selectors.checkoutPrice.textContent = copy.price;
   selectors.checkoutSubline.textContent = copy.subline;
+  document.querySelector(".checkout-summary ul").innerHTML = target.features.slice(0, 4).map((feature) => `<li>${escapeHTML(feature)}</li>`).join("");
   selectors.billingToggle?.querySelectorAll("[data-plan-cycle]").forEach((button) => {
     const active = button.dataset.planCycle === state.checkoutPlan;
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", String(active));
   });
-  if (selectors.proPriceLabel) selectors.proPriceLabel.textContent = state.checkoutPlan === "yearly" ? "119,99 €" : "12,99 €";
+  if (selectors.proPriceLabel) selectors.proPriceLabel.textContent = state.checkoutPlan === "yearly" ? PLAN_CONFIG.pro.yearly : PLAN_CONFIG.pro.monthly;
 }
 
-function startCheckout(plan = state.checkoutPlan) {
-  state.checkoutPlan = plan;
+function startCheckout(plan = "pro") {
+  const normalized = normalizePlan(plan === "monthly" || plan === "yearly" ? "pro" : plan);
+  if (normalized === "business") {
+    showToast("Business-Anfrage geöffnet. Wir melden uns mit Team- und API-Optionen.");
+    openModal("pro", state.activeAsset, { feature: "Business anfragen", benefit: "Team-Dashboard, API, Reports, Admin-Funktionen und professionelle Workflows." });
+    return;
+  }
+  state.checkoutTargetPlan = normalized;
   localStorage.setItem("selectedBillingCycle", state.checkoutPlan);
   localStorage.setItem("marketpilot-billing-cycle", state.checkoutPlan);
   localStorage.setItem("marketpilot-checkout-plan", state.checkoutPlan);
   selectors.checkoutModal.hidden = false;
   selectors.checkoutMessage.textContent = "";
   selectors.completeCheckout.disabled = false;
-  selectors.completeCheckout.textContent = state.isProUser ? "Zum Pro Dashboard" : "Pro aktivieren";
+  selectors.completeCheckout.textContent = state.currentPlan === normalized ? "Zum Dashboard" : `${PLAN_CONFIG[normalized].name} aktivieren`;
   updateCheckoutUI();
 }
 
@@ -1233,6 +1505,33 @@ function drawHeroSparkline(canvas, series, color = "#61df91") {
   ctx.stroke();
 }
 
+function drawSimpleSparkline(canvas, series, color = "#61df91") {
+  drawHeroSparkline(canvas, series, color);
+}
+
+function updateHeroFallback(asset) {
+  const currency = asset.type === "Krypto" ? "EUR" : "USD";
+  const demo = demoChart(asset, "1m", basePriceForAsset(asset));
+  const period = periodChange(demo.series, getRangeConfig("1m").days);
+  const color = !Number.isFinite(period) || Math.abs(period) < 0.15 ? "#5da9ff" : period < 0 ? "#ff6b7d" : "#61df91";
+  document.querySelector("#heroAsset").textContent = asset.name;
+  document.querySelector("#heroSymbol").textContent = asset.symbol;
+  document.querySelector("#heroPrice").textContent = formatPrice(demo.price, currency);
+  document.querySelector("#heroTrend").textContent = formatPercent(period);
+  document.querySelector("#heroTrend").className = trendClass(period);
+  document.querySelector("#heroSource").textContent = asset.geckoId ? "CoinGecko · Cache" : "Yahoo · Cache";
+  const heroInsight = heroInsightCopy(asset, period, "cache");
+  document.querySelector("#heroInsight").textContent = heroInsight.label;
+  document.querySelector("#heroInsightText").textContent = heroInsight.text;
+  drawSimpleSparkline(selectors.heroChart, demo.series, color);
+}
+
+function sourceLabel(source, health) {
+  const clean = source || "Cache";
+  const status = healthLabel(health);
+  return clean.includes(status) ? clean : `${clean} · ${status}`;
+}
+
 function drawChart(canvas, series, currency, color = "#61df91", options = {}) {
   const ctx = canvas.getContext("2d");
   const rect = canvas.getBoundingClientRect();
@@ -1402,23 +1701,22 @@ function updateDetailSkeleton(asset) {
   document.querySelector("#metricPeriodChange").textContent = "Heute";
   document.querySelector("#metricHighLow").textContent = "Letzter Stand";
   document.querySelector("#metricSentiment").textContent = "Neutral";
-  document.querySelector("#assetAiSummary").textContent = "Kurzfazit, mögliche Treiber und Risiko-Hinweise erscheinen nach Asset-Auswahl.";
-  document.querySelector("#assetOpportunities").textContent = "Wird nach Datenlage eingeordnet.";
-  document.querySelector("#assetRisks").textContent = "Wird nach Volatilität und Asset-Typ eingeordnet.";
-  document.querySelector("#assetWatch").textContent = "Achte auf Datenqualität, News-Kontext und ungewöhnliche Bewegungen.";
+  document.querySelector("#assetAiSummary").textContent = `${asset.name} ist ausgewählt. Der Chart steht im Fokus; Kursbewegung, Risiko und News-Kontext werden neutral zusammengeführt.`;
+  document.querySelector("#assetOpportunities").textContent = asset.type === "ETF" ? "Breite Streuung kann Schwankungen abfedern, Top-Holdings bleiben trotzdem relevant." : "Momentum kann Aufmerksamkeit erzeugen, muss aber durch Volumen und Marktbreite bestätigt werden.";
+  document.querySelector("#assetRisks").textContent = `Risiko ${asset.risk}: Beobachte schnelle Gegenbewegungen, Datenstatus und News Impact.`;
+  document.querySelector("#assetWatch").textContent = "Achte auf aktuelle Quelle, Volumen, ähnliche Assets und ob die Bewegung in mehreren Zeiträumen bestätigt wird.";
   document.querySelector("#assetMetrics").textContent = mockFundamentals(asset);
   document.querySelector("#assetNews").textContent = "News Impact wird nach Assetklasse, Bewegung und Watchlist-Bezug eingeordnet.";
   document.querySelector("#assetSimilar").textContent = "Ähnliche Assets erscheinen nach Assetklasse, Region und Sektor.";
   document.querySelector("#assetMetricsDeep").textContent = mockFundamentals(asset);
-  document.querySelector("#assetDataQuality").textContent = "Datenstatus, Quelle und Update-Zeit werden geprüft.";
-  document.querySelector("#assetNewsDeep").textContent = "News Impact wird nach Relevanz, Assetklasse und Watchlist-Kontext eingeordnet.";
-  document.querySelector("#assetNewsImpact").textContent = "Relevanz wird nach Marktbewegung und Watchlist-Kontext eingeordnet.";
-  document.querySelector("#assetRiskDeep").textContent = "Risiko wird nach Volatilität, Assetklasse und Datenstatus eingeordnet.";
+  document.querySelector("#assetDataQuality").textContent = "Quelle: Cache. Aktualität, Datenstatus und Fallback werden transparent angezeigt.";
+  document.querySelector("#assetNewsDeep").textContent = `${asset.name} wird mit News zu ${assetSector(asset)}, Marktbreite und Watchlist-Bezug verbunden.`;
+  document.querySelector("#assetNewsImpact").textContent = "Impact entsteht, wenn News, Bewegung und Watchlist-Bezug gleichzeitig auffällig sind.";
+  document.querySelector("#assetRiskDeep").textContent = `Risikoprofil ${asset.risk}. Volatilität, Assetklasse und Datenstatus bestimmen die Beobachtungspunkte.`;
   document.querySelector("#assetRiskWatch").textContent = "Achte auf schnelle Bewegungen, Datenqualität und Zeithorizont.";
   document.querySelector("#assetNotePreview").textContent = state.notes[asset.symbol] || "Noch keine Notiz gespeichert.";
   document.querySelector("#assetAlertPreview").textContent = state.alerts[asset.symbol] || "Noch kein Alarm gespeichert.";
-  document.querySelector("#heroAsset").textContent = asset.name;
-  document.querySelector("#heroSymbol").textContent = asset.symbol;
+  updateHeroFallback(asset);
   if (selectors.smartAlertAsset) selectors.smartAlertAsset.value = asset.name;
   selectors.chartLoading.textContent = "Chart bereit";
   selectors.chartLoading.classList.remove("hidden");
@@ -1544,9 +1842,9 @@ function updateDetail(chart) {
   document.querySelector("#metricHighLow").textContent = highLow(series, currency);
   document.querySelector("#metricSentiment").textContent = sentimentFromChange(changePct);
   document.querySelector("#heroPrice").textContent = formatPrice(price, currency);
-  document.querySelector("#heroTrend").textContent = `${rangeLabel(state.activeRange)} ${formatPercent(period)}`;
+  document.querySelector("#heroTrend").textContent = formatPercent(period);
   document.querySelector("#heroTrend").className = trendClass(period);
-  document.querySelector("#heroSource").textContent = source;
+  document.querySelector("#heroSource").textContent = sourceLabel(source, health);
   const heroInsight = heroInsightCopy(asset, period, health);
   document.querySelector("#heroInsight").textContent = heroInsight.label;
   document.querySelector("#heroInsightText").textContent = heroInsight.text;
@@ -1565,7 +1863,7 @@ function updateDetail(chart) {
   updateDetailPanels(chart, period);
   updateChartIndicatorNote(series);
   drawChart(selectors.chart, series, currency, color);
-  drawHeroSparkline(selectors.heroChart, series, color);
+  drawSimpleSparkline(selectors.heroChart, series, color);
   selectors.chartLoading.classList.add("hidden");
   updateBriefing();
   updateWatchlistButton();
@@ -1854,6 +2152,12 @@ function toggleWatchlist(asset) {
     state.savedSymbols.delete(asset.symbol);
     showToast(`${asset.name} wurde aus der Watchlist entfernt.`);
   } else {
+    const limit = currentPlanConfig().watchlistLimit;
+    if (state.savedSymbols.size >= limit) {
+      const required = state.currentPlan === "free" ? "starter" : "pro";
+      openUpgradeModal(required, "Watchlist-Limit erreicht", `${currentPlanConfig().name} erlaubt ${planLimitLabel(limit)} Watchlist-Werte. ${PLAN_CONFIG[required].name} erweitert dein Limit.`);
+      return;
+    }
     state.savedSymbols.add(asset.symbol);
     showToast(`${asset.name} wurde zur Watchlist hinzugefügt.`);
   }
@@ -1868,8 +2172,14 @@ function toggleCompare(asset) {
     state.compareSymbols.delete(asset.symbol);
     showToast(`${asset.name} wurde aus dem Vergleich entfernt.`);
   } else {
-    if (state.compareSymbols.size >= 4) {
-      showToast("Maximal 4 Assets können gleichzeitig verglichen werden.");
+    const limit = currentPlanConfig().compareLimit;
+    if (limit === 0) {
+      openUpgradeModal("starter", "Compare erforderlich", "Starter schaltet den Vergleich mit 2 Assets frei. Pro erweitert Compare auf bis zu 4 Assets.");
+      return;
+    }
+    if (state.compareSymbols.size >= limit) {
+      const required = hasPlan("pro") ? "elite" : "pro";
+      openUpgradeModal(required, "Compare-Limit erreicht", `${currentPlanConfig().name} erlaubt ${planLimitLabel(limit)} Compare-Assets. ${PLAN_CONFIG[required].name} erweitert den Vergleich.`);
       return;
     }
     state.compareSymbols.add(asset.symbol);
@@ -2321,12 +2631,14 @@ function renderAssistantMessages() {
 
 function askAssistant(question) {
   const key = todayKey();
-  if (!state.isProUser && (state.assistantDaily[key] || 0) >= 3) {
-    requirePro("AI Assistant", "Pro schaltet unbegrenzte Fragen, Watchlist-Analyse, News Impact und Risiko-Erklärungen frei.");
+  const limit = currentPlanConfig().aiLimit;
+  if (limit !== Infinity && (state.assistantDaily[key] || 0) >= limit) {
+    const required = state.currentPlan === "free" ? "starter" : "pro";
+    openUpgradeModal(required, "AI-Fragen-Limit erreicht", `${currentPlanConfig().name} erlaubt ${limit} AI-Fragen pro Tag. ${PLAN_CONFIG[required].name} erweitert deine Nutzung.`);
     updateProUI();
     return;
   }
-  if (!state.isProUser) state.assistantDaily[key] = (state.assistantDaily[key] || 0) + 1;
+  if (limit !== Infinity) state.assistantDaily[key] = (state.assistantDaily[key] || 0) + 1;
   state.assistantMessages.push({ role: "user", text: question });
   state.assistantMessages.push({ role: "ai", text: "Nexus AI analysiert Kontext, Watchlist, News und Datenqualität..." });
   renderAssistantMessages();
@@ -2703,7 +3015,7 @@ selectors.modal.addEventListener("click", (event) => {
   }
   if (event.target.closest("[data-open-checkout-from-modal]")) {
     closeModal();
-    openCheckout(state.checkoutPlan);
+    openCheckout(state.checkoutTargetPlan || "pro");
     return;
   }
   if (event.target === selectors.modal) closeModal();
@@ -2729,6 +3041,14 @@ selectors.modalConfirm.addEventListener("click", () => {
     showToast(`Notiz für ${asset.name} gespeichert.`);
   }
   if (state.modalMode === "alert") {
+    const existing = Boolean(state.alerts[asset.symbol]);
+    const alertCount = Object.keys(state.alerts).length;
+    const limit = currentPlanConfig().alertLimit;
+    if (!existing && alertCount >= limit) {
+      const required = state.currentPlan === "free" ? "starter" : state.currentPlan === "starter" ? "pro" : "elite";
+      openUpgradeModal(required, "Alert-Limit erreicht", `${currentPlanConfig().name} erlaubt ${planLimitLabel(limit)} aktive Alerts. ${PLAN_CONFIG[required].name} erweitert deine Alarm-Workflows.`);
+      return;
+    }
     state.alerts[asset.symbol] = selectors.modalInput.value.trim() || "Bewegung beobachten";
     saveAlerts();
     renderAlerts();
@@ -2800,6 +3120,46 @@ document.querySelectorAll(".plan-button").forEach((button) => {
   });
 });
 
+document.querySelector("#pricing")?.addEventListener("click", (event) => {
+  const cycle = event.target.closest("[data-pricing-cycle]");
+  if (cycle) {
+    state.checkoutPlan = cycle.dataset.pricingCycle;
+    localStorage.setItem("selectedBillingCycle", state.checkoutPlan);
+    localStorage.setItem("marketpilot-billing-cycle", state.checkoutPlan);
+    localStorage.setItem("marketpilot-checkout-plan", state.checkoutPlan);
+    renderPricing();
+    updateCheckoutUI();
+    showToast(state.checkoutPlan === "yearly" ? "Jährliche Zahlung ausgewählt." : "Monatliche Zahlung ausgewählt.");
+    return;
+  }
+  const codeButton = event.target.closest("[data-open-pricing-code]");
+  if (codeButton) {
+    openAccessModal();
+    return;
+  }
+  const fit = event.target.closest("[data-plan-fit]");
+  if (fit) {
+    const plan = PLAN_CONFIG[normalizePlan(fit.dataset.planFit)];
+    const result = document.querySelector("#planFitResult");
+    if (result) {
+      result.innerHTML = `<strong>${plan.name} empfohlen</strong><p>${plan.audience}</p><button class="primary-action" type="button" data-plan-key="${normalizePlan(fit.dataset.planFit)}">${planButtonLabel(fit.dataset.planFit)}</button>`;
+    }
+    return;
+  }
+  const planButton = event.target.closest("[data-plan-key]");
+  if (!planButton) return;
+  const plan = normalizePlan(planButton.dataset.planKey);
+  if (plan === state.currentPlan) {
+    showToast(`${PLAN_CONFIG[plan].name} ist dein aktueller Plan.`);
+    return;
+  }
+  if (planRank(plan) < planRank(state.currentPlan)) {
+    showToast(`${PLAN_CONFIG[plan].name} ist in deinem aktuellen Plan enthalten.`);
+    return;
+  }
+  startCheckout(plan);
+});
+
 selectors.pricingAccessCode?.addEventListener("click", openAccessModal);
 
 selectors.billingToggle?.addEventListener("click", (event) => {
@@ -2810,6 +3170,7 @@ selectors.billingToggle?.addEventListener("click", (event) => {
   localStorage.setItem("marketpilot-billing-cycle", state.checkoutPlan);
   localStorage.setItem("marketpilot-checkout-plan", state.checkoutPlan);
   updateCheckoutUI();
+  renderPricing();
 });
 
 selectors.checkoutClose?.addEventListener("click", closeCheckout);
@@ -2821,9 +3182,9 @@ selectors.checkoutAccessCode?.addEventListener("click", () => {
   openAccessModal();
 });
 selectors.completeCheckout?.addEventListener("click", () => {
-  if (state.isProUser) {
+  if (state.currentPlan === state.checkoutTargetPlan) {
     closeCheckout();
-    setActiveView("pro");
+    setActiveView(hasPlan("pro") ? "pro" : "dashboard");
     window.setTimeout(() => document.querySelector("#proDashboard")?.scrollIntoView({ behavior: "smooth", block: "start" }), 250);
     runProDashboardAction("assistant");
     return;
@@ -2831,16 +3192,17 @@ selectors.completeCheckout?.addEventListener("click", () => {
   if (state.checkoutLoading) return;
   state.checkoutLoading = true;
   selectors.completeCheckout.disabled = true;
-  selectors.completeCheckout.textContent = "Pro wird aktiviert...";
-  selectors.checkoutMessage.textContent = "Pro wird aktiviert...";
+  const target = PLAN_CONFIG[normalizePlan(state.checkoutTargetPlan)];
+  selectors.completeCheckout.textContent = `${target.name} wird aktiviert...`;
+  selectors.checkoutMessage.textContent = `${target.name} wird aktiviert...`;
   window.setTimeout(() => {
-    activatePro("purchase");
-    selectors.checkoutMessage.textContent = "Pro aktiviert.";
+    activatePlan(state.checkoutTargetPlan, "purchase");
+    selectors.checkoutMessage.textContent = `${target.name} aktiviert.`;
     selectors.completeCheckout.textContent = "Zum Pro Dashboard";
     selectors.completeCheckout.disabled = false;
     state.checkoutLoading = false;
-    setActiveView("pro");
-    showToast("Pro aktiviert");
+    setActiveView(hasPlan("pro") ? "pro" : "dashboard");
+    showToast(`${target.name} aktiviert`);
   }, 900);
 });
 
@@ -2882,20 +3244,23 @@ selectors.accessModal.addEventListener("click", (event) => {
 });
 async function redeemAccessCode() {
   const code = selectors.accessCodeInput.value.trim();
-  if (await validateAccessCode(code)) {
-    activatePro("code");
+  const access = await validateAccessCode(code);
+  if (access.valid) {
+    activatePlan(access.plan || "pro", "code");
     closeAccessModal();
-    showToast("Pro-Zugang aktiviert.");
+    showToast(`${PLAN_CONFIG[normalizePlan(access.plan || "pro")].name}-Zugang aktiviert.`);
   } else {
     selectors.accessCodeMessage.textContent = "Code nicht gültig.";
   }
 }
 
 function resetDemoAccess() {
-  state.isProUser = false;
+  state.currentPlan = "free";
+  syncPlanFlags();
   state.proAccessMethod = "";
   saveProState();
   updateProUI();
+  renderPricing();
   renderPremiumModules();
   showToast("Developer Access zurückgesetzt.");
 }
@@ -2923,7 +3288,7 @@ selectors.proDashboard?.addEventListener("click", (event) => {
 selectors.premiumGrid?.addEventListener("click", (event) => {
   if (state.isProUser) return;
   const card = event.target.closest(".premium-card.requires-pro");
-  if (!card || event.target.closest("select")) return;
+  if (!card || event.target.closest("select, input, button")) return;
   openCheckout(state.checkoutPlan);
   showToast(`${card.dataset.featureCard || "Pro"} mit Pro freischalten.`);
 });
@@ -2988,7 +3353,13 @@ selectors.generateWatchlistBriefing.addEventListener("click", () => {
 });
 selectors.createSmartAlert.addEventListener("click", () => {
   const type = selectors.smartAlertType.value;
-  if (type !== "price" && !requirePro("Smart Alerts", "Pro schaltet Volatilitäts-, News-Impact- und Trendalarme frei.")) return;
+  if (type !== "price" && !requirePlan("pro", "Smart Alerts", "Pro schaltet Volatilitäts-, News-Impact- und Trendalarme frei.")) return;
+  const limit = currentPlanConfig().alertLimit;
+  if (state.smartAlerts.length >= limit) {
+    const required = hasPlan("pro") ? "elite" : "pro";
+    openUpgradeModal(required, "Smart-Alert-Limit erreicht", `${currentPlanConfig().name} erlaubt ${planLimitLabel(limit)} Smart Alerts. ${PLAN_CONFIG[required].name} erweitert deine Alert-Regeln.`);
+    return;
+  }
   const assetName = selectors.smartAlertAsset.value.trim() || state.activeAsset.name;
   const condition = selectors.smartAlertCondition.value.trim() || "Auffällige Bewegung beobachten";
   const value = selectors.smartAlertValue?.value.trim() || "";
@@ -3095,6 +3466,8 @@ window.addEventListener("resize", () => {
   if (cached) updateDetail(cached);
 });
 
+syncPlanFlags();
+renderPricing();
 setStatus("Marktdaten verbunden", "live");
 bootInterfaceEffects();
 setupActiveNavigation();
