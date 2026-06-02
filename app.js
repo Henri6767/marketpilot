@@ -252,7 +252,7 @@ function migrateLegacyAccess() {
     localStorage.getItem("marketpilot-pro-demo") === "true" ||
     localStorage.getItem("nexus-pro-access") === "true";
   const shouldUpgradeCodeAccess = legacyCodeAccess && (legacyProActive || ["pro", "elite"].includes(storedPlan));
-  if (storedPlan === "business") return "business";
+  if (storedPlan === "business" || storedPlan === "elite") return storedPlan;
   if (!shouldUpgradeCodeAccess) return storedPlan || (legacyProActive ? "pro" : "free");
   localStorage.setItem("marketpilot-current-plan", "business");
   localStorage.setItem("currentPlan", "business");
@@ -262,6 +262,7 @@ function migrateLegacyAccess() {
   localStorage.setItem("proAccessMethod", "code");
   localStorage.setItem("marketpilot-pro-method", "code");
   localStorage.setItem("marketpilot-access-method", "code");
+  localStorage.setItem("planSource", "code");
   if (!localStorage.getItem("planActivatedAt")) localStorage.setItem("planActivatedAt", new Date().toISOString());
   return "business";
 }
@@ -309,8 +310,10 @@ const state = {
   assistantDaily: JSON.parse(localStorage.getItem("marketpilot-assistant-daily") || "{}"),
   marketRadarFilter: "Alle",
   smartAlerts: JSON.parse(localStorage.getItem("marketpilot-smart-alerts") || "[]"),
+  savedReports: JSON.parse(localStorage.getItem("savedReports") || localStorage.getItem("marketpilot-saved-reports") || "[]"),
   accessMethod: initialSubscription.accessMethod,
   proAccessMethod: initialSubscription.accessMethod,
+  planSource: localStorage.getItem("planSource") || initialSubscription.accessMethod || "free",
   planActivatedAt: localStorage.getItem("planActivatedAt") || "",
   checkoutPlan: localStorage.getItem("selectedBillingCycle") || localStorage.getItem("marketpilot-billing-cycle") || localStorage.getItem("marketpilot-checkout-plan") || "monthly",
   checkoutTargetPlan: "pro",
@@ -337,15 +340,34 @@ const PLAN_CONFIG = {
     yearly: "0 €",
     priceMonthly: "0 € pro Monat",
     priceYearly: "0 € pro Jahr",
-    audience: "Für den Einstieg und erste Marktüberblicke.",
+    audience: "Teste MarketPilot und erhalte erste Marktüberblicke.",
     cta: "Kostenlos starten",
     accent: "free",
     aiLimit: 3,
     watchlistLimit: 3,
     alertLimit: 1,
     compareLimit: 0,
-    features: ["Basis-Dashboard", "3 Watchlist-Werte", "3 AI-Fragen pro Tag", "Basis-Marktbriefing", "Basis-News", "1 einfacher Preisalarm"],
-    hiddenFeatures: ["Begrenzter Screener", "Live-/Cache-Datenstatus", "Kein Export", "Kein Deep Dive", "Keine Smart Alerts Pro"]
+    reportLevel: "Kein Report",
+    exportLevel: "Kein Export",
+    newsImpactLevel: "Basis-News",
+    learningLevel: "Tooltips",
+    historyLevel: "Kurzverlauf",
+    features: [
+      "Basis-Dashboard mit Marktüberblick",
+      "3 Watchlist-Werte zum Testen",
+      "3 kurze AI-Fragen pro Tag",
+      "Basis-Marktbriefing und Basis-News",
+      "1 einfacher Preisalarm",
+      "Eingeschränkter Screener"
+    ],
+    hiddenFeatures: [
+      "Einfache Asset-Übersicht",
+      "Basis-Datenstatus",
+      "Basis-Learning-Tooltips",
+      "Kein News Impact für Watchlist",
+      "Keine Smart Alerts",
+      "Kein Deep Dive, Report oder Export"
+    ]
   },
   starter: {
     name: "Starter",
@@ -354,32 +376,70 @@ const PLAN_CONFIG = {
     yearly: "49,99 €",
     priceMonthly: "4,99 € pro Monat",
     priceYearly: "49,99 € pro Jahr",
-    audience: "Für kleine Watchlists und regelmäßige Marktchecks.",
+    audience: "Für kleine Watchlists und regelmäßige Basis-Checks.",
     cta: "Starter wählen",
     accent: "starter",
     aiLimit: 10,
     watchlistLimit: 10,
     alertLimit: 5,
     compareLimit: 2,
-    features: ["10 Watchlist-Werte", "10 AI-Fragen pro Tag", "Basis-Watchlist-Briefing", "5 aktive Preisalarme", "Basis-News Impact", "Compare mit 2 Assets"],
-    hiddenFeatures: ["Basis-Kennzahlen", "Learning Layer Basis", "Keine Reports", "Keine Deep Asset Analysis", "Keine erweiterten Smart Alerts"]
+    reportLevel: "Basis-Briefing",
+    exportLevel: "Kein Export",
+    newsImpactLevel: "Basis-News Impact",
+    learningLevel: "Basic mit Beispielen",
+    historyLevel: "7 Tage Snapshot",
+    features: [
+      "10 Watchlist-Werte für kleine Portfolios",
+      "10 AI-Fragen pro Tag mit Basis-Kontext",
+      "Small Watchlist Briefing und Daily Summary",
+      "5 aktive Preisalarme",
+      "Basis-News Impact",
+      "2-Asset Compare"
+    ],
+    hiddenFeatures: [
+      "Basis-Kennzahlen für Aktien, ETFs und Krypto",
+      "Einfache Notizen",
+      "Learning Layer Basic mit Beispielen",
+      "7 Tage Verlauf",
+      "Keine Smart Alerts Pro",
+      "Keine Reports, Exporte oder Watchlist-Gruppen"
+    ]
   },
   pro: {
     name: "Pro",
-    badge: "Beliebt",
+    badge: "Sweet Spot",
     monthly: "12,99 €",
     yearly: "119,99 €",
     priceMonthly: "12,99 € pro Monat",
     priceYearly: "119,99 € pro Jahr",
-    audience: "Für Nutzer, die ihre Watchlist täglich verstehen wollen.",
+    audience: "Für Nutzer, die ihre Watchlist täglich mit AI verstehen wollen.",
     cta: "Pro kaufen",
     accent: "pro",
     aiLimit: Infinity,
     watchlistLimit: Infinity,
     alertLimit: 25,
     compareLimit: 4,
-    features: ["Unbegrenzter AI Assistant", "Watchlist Pulse", "AI Watchlist Briefing", "Smart Alerts", "News Impact für Watchlist", "Deep Asset Analysis"],
-    hiddenFeatures: ["Compare Battle bis 4 Assets", "Confidence Score", "Erweiterte Kennzahlen", "Asset Notes", "Mehr Historie", "Report Preview"]
+    reportLevel: "Report Preview",
+    exportLevel: "Preview",
+    newsImpactLevel: "Watchlist-News Impact",
+    learningLevel: "Assetbezogene Erklärungen",
+    historyLevel: "Erweiterte Historie",
+    features: [
+      "Unbegrenzter AI Assistant",
+      "Watchlist Pulse und AI Watchlist Briefing",
+      "Smart Alerts für Bewegung, News und Risiko",
+      "News Impact für deine Watchlist",
+      "Deep Asset Analysis für Aktien, ETFs und Krypto",
+      "Compare Battle bis 4 Assets"
+    ],
+    hiddenFeatures: [
+      "Confidence Score und Data Quality Details",
+      "Asset Notes und persönliche Tageszusammenfassung",
+      "Risk Radar für Watchlist",
+      "Explain This Metric",
+      "Report Preview",
+      "Premium UI Features und priorisierte Pro-Module"
+    ]
   },
   elite: {
     name: "Elite",
@@ -388,15 +448,34 @@ const PLAN_CONFIG = {
     yearly: "239,99 €",
     priceMonthly: "24,99 € pro Monat",
     priceYearly: "239,99 € pro Jahr",
-    audience: "Für Power-User mit maximaler AI, Reports und Analyse.",
+    audience: "Für Power-User, die Advanced AI, Reports und Szenarien brauchen.",
     cta: "Elite kaufen",
     accent: "elite",
     aiLimit: Infinity,
     watchlistLimit: Infinity,
     alertLimit: Infinity,
     compareLimit: 6,
-    features: ["Alles aus Pro", "Advanced AI Assistant", "Watchlist Health Score", "Advanced Smart Alerts", "AI Risiko-Scoring", "PDF/CSV Export Preview"],
-    hiddenFeatures: ["Gespeicherte Reports", "Advanced News Impact", "Scenario Analysis", "Advanced Compare", "Early Access Labs", "Mehr historische Zeiträume"]
+    reportLevel: "Saved Reports",
+    exportLevel: "PDF/CSV Preview",
+    newsImpactLevel: "Advanced News Impact",
+    learningLevel: "Advanced Chart-/Kennzahlen-Kontext",
+    historyLevel: "Erweiterte historische Zeiträume",
+    features: [
+      "Alles aus Pro",
+      "Advanced AI Assistant mit Scenario Analysis",
+      "Watchlist Groups und Health Score",
+      "Advanced Smart Alerts und Multi-Condition Rules",
+      "Gespeicherte Reports und PDF/CSV Export Preview",
+      "Premium Themes und Early Access Labs"
+    ],
+    hiddenFeatures: [
+      "AI Report Builder",
+      "Explain This Chart Pro",
+      "ETF Cost Analyzer Pro",
+      "Crypto Volatility Monitor Pro",
+      "Dividend Overview Pro",
+      "Advanced Risk Radar und Saved Briefings"
+    ]
   },
   business: {
     name: "Business",
@@ -405,17 +484,122 @@ const PLAN_CONFIG = {
     yearly: "ab 499 €",
     priceMonthly: "ab 49,99 € pro Monat",
     priceYearly: "ab 499 € pro Jahr",
-    audience: "Für Teams, API, Reports und professionelle Workflows.",
+    audience: "Für Teams, Reports, API und professionelle Workflows.",
     cta: "Kontakt aufnehmen",
     accent: "business",
     aiLimit: Infinity,
     watchlistLimit: Infinity,
     alertLimit: Infinity,
     compareLimit: Infinity,
-    features: ["Alles aus Elite", "Team-Dashboard", "Mehrere Nutzer", "Admin-Bereich", "Team-Watchlists", "API-Zugang vorbereitet"],
-    hiddenFeatures: ["Team Reports", "CSV/PDF-Export", "White-Label optional", "Compliance-Hinweise", "Priorisierter Support", "Individuelle Datenquellen"]
+    reportLevel: "Team Reports",
+    exportLevel: "Compliance Export",
+    newsImpactLevel: "Team-News-Impact",
+    learningLevel: "Team-Schulungsmodus",
+    historyLevel: "Team-/Export-Historie",
+    features: [
+      "Alles aus Elite",
+      "Team Dashboard, User Roles und Admin Controls",
+      "Team-Watchlists und Shared Alerts",
+      "Team Reports und Business Report Builder",
+      "API Access vorbereitet",
+      "Compliance Export und Data Source Settings"
+    ],
+    hiddenFeatures: [
+      "Mehrere Nutzer und Rollenrechte",
+      "Shared Briefings und Team Activity",
+      "Audit Log Demo",
+      "Eigene Datenquellen vorbereitet",
+      "White-Label/Branding optional",
+      "Priorisierter Support und dedizierte Workflows"
+    ]
   }
 };
+
+const PLAN_FEATURE_REQUIREMENTS = {
+  watchlistSlot: "starter",
+  unlimitedWatchlist: "pro",
+  aiAssistant: "free",
+  unlimitedAi: "pro",
+  basicNewsImpact: "starter",
+  smartAlerts: "pro",
+  advancedSmartAlerts: "elite",
+  multiConditionAlerts: "elite",
+  deepAssetAnalysis: "pro",
+  compare: "starter",
+  advancedCompare: "elite",
+  reportPreview: "pro",
+  savedReports: "elite",
+  pdfExport: "elite",
+  csvExport: "elite",
+  scenarioAnalysis: "elite",
+  watchlistGroups: "elite",
+  premiumThemes: "elite",
+  businessSuite: "business",
+  teamDashboard: "business",
+  apiAccess: "business",
+  complianceExport: "business",
+  teamReports: "business"
+};
+
+const FEATURE_UPGRADE_COPY = {
+  watchlistSlot: "Mehr Watchlist-Plätze machen deine täglichen Briefings persönlicher.",
+  unlimitedWatchlist: "Pro entfernt das Watchlist-Limit und priorisiert auffällige Werte automatisch.",
+  smartAlerts: "Erhalte Hinweise, wenn deine Watchlist ungewöhnliche Bewegungen, Risikoänderungen oder News Impact zeigt.",
+  advancedSmartAlerts: "Elite kombiniert mehrere Bedingungen wie Trend Break, Volatilität, Risiko und News Impact.",
+  deepAssetAnalysis: "Verstehe Aktien, ETFs und Krypto mit typgerechten Kennzahlen, AI-Kurzfazit und Risiko-Kontext.",
+  scenarioAnalysis: "Simuliere, wie Tech-, Zins- oder Krypto-News deine Watchlist beeinflussen könnten.",
+  reportPreview: "Bereite professionelle Zusammenfassungen deiner Watchlist, Marktbewegungen und News-Signale vor.",
+  savedReports: "Speichere Briefings und Reports für spätere Analysen.",
+  pdfExport: "Exportiere Report-Previews als PDF/CSV-Arbeitsgrundlage.",
+  apiAccess: "Verbinde Reports, Team-Watchlists und Datenexporte mit externen Workflows.",
+  teamDashboard: "Koordiniere Watchlists, Alerts, Rollen und Reports im Team."
+};
+
+const PLAN_EXAMPLES = [
+  ["free", "Bitcoin bewegt sich auffällig. Basis-Briefing verfügbar."],
+  ["starter", "Deine 8 Watchlist-Werte: 2 auffällig, 1 News-Signal."],
+  ["pro", "Nvidia fällt 2,1 %, News Impact hoch, Smart Alert empfohlen."],
+  ["elite", "Scenario Analysis: Tech-News könnten 4 Watchlist-Werte beeinflussen."],
+  ["business", "Team Report: 3 Watchlists, 12 Alerts, 2 Exporte vorbereitet."]
+];
+
+const FEATURE_OUTCOMES = [
+  ["Zeit sparen", "Daily AI Briefing, Morning Market Pulse, Watchlist Pulse und News Impact bündeln das Wichtigste."],
+  ["Risiken schneller sehen", "Risk Radar, Smart Alerts, AI Risiko-Scoring und Volatility Alerts zeigen Auffälligkeiten früher."],
+  ["Tiefer analysieren", "Deep Asset Analysis, ETF Analyzer, Crypto Volatility Monitor und Explain This Chart liefern Kontext."],
+  ["Ergebnisse sichern", "Saved Briefings, Report Builder, PDF/CSV Export Preview und Asset Notes halten Erkenntnisse fest."],
+  ["Im Team arbeiten", "Business Dashboard, Rollen, API, Team Reports und Shared Watchlists verbinden Workflows."]
+];
+
+const ELITE_LABS_MODULES = [
+  "Advanced AI Assistant",
+  "Scenario Analysis",
+  "Watchlist Health Score",
+  "Advanced Smart Alerts",
+  "Saved Reports",
+  "PDF/CSV Export Preview",
+  "Premium Themes",
+  "Advanced News Impact",
+  "Explain This Chart Pro",
+  "ETF Cost Analyzer Pro",
+  "Crypto Volatility Monitor Pro"
+];
+
+const BUSINESS_SUITE_MODULES = [
+  "Team Dashboard",
+  "User Roles",
+  "Admin Controls",
+  "Team Watchlists",
+  "Shared Alerts",
+  "Team Reports",
+  "API Access",
+  "Compliance Export",
+  "Business Reports",
+  "Data Source Settings",
+  "Audit Log Demo",
+  "Team Activity",
+  "Shared Briefings"
+];
 
 async function validateAccessCode(code) {
   // Later this can become: return fetch("/api/access/validate", { method: "POST", body: JSON.stringify({ code }) });
@@ -569,8 +753,16 @@ function planRank(plan) {
   return PLAN_ORDER.indexOf(normalizePlan(plan));
 }
 
+function getPlanLevel(plan) {
+  return planRank(plan);
+}
+
 function hasPlan(requiredPlan) {
   return planRank(state.currentPlan) >= planRank(requiredPlan);
+}
+
+function hasPlanAccess(requiredPlan) {
+  return hasPlan(requiredPlan);
 }
 
 function currentPlanConfig() {
@@ -586,6 +778,37 @@ function planLimitLabel(value) {
   return value === Infinity ? "Unbegrenzt" : String(value);
 }
 
+function getPlanLimit(feature, plan = state.currentPlan) {
+  const config = PLAN_CONFIG[normalizePlan(plan)];
+  const map = {
+    ai: "aiLimit",
+    aiQuestions: "aiLimit",
+    watchlist: "watchlistLimit",
+    alerts: "alertLimit",
+    smartAlerts: "alertLimit",
+    compare: "compareLimit"
+  };
+  const key = map[feature] || feature;
+  return config[key] ?? null;
+}
+
+function getCurrentPlanFeatures(plan = state.currentPlan) {
+  const config = PLAN_CONFIG[normalizePlan(plan)];
+  return [...config.features, ...config.hiddenFeatures];
+}
+
+function getUpgradeTargetForFeature(featureName) {
+  return normalizePlan(PLAN_FEATURE_REQUIREMENTS[featureName] || "pro");
+}
+
+function isFeatureLocked(featureName, currentPlan = state.currentPlan) {
+  return planRank(currentPlan) < planRank(getUpgradeTargetForFeature(featureName));
+}
+
+function featureUpgradeCopy(featureName) {
+  return FEATURE_UPGRADE_COPY[featureName] || "Schalte mehr Analyse-Tiefe, Automatisierung und AI-Kontext für deinen Workflow frei.";
+}
+
 function planPrice(plan, cycle = state.checkoutPlan) {
   const config = PLAN_CONFIG[normalizePlan(plan)];
   return cycle === "yearly" ? config.priceYearly : config.priceMonthly;
@@ -595,8 +818,9 @@ function openUpgradeModal(requiredPlan, feature, benefit = "") {
   const plan = PLAN_CONFIG[normalizePlan(requiredPlan)];
   state.checkoutTargetPlan = normalizePlan(requiredPlan);
   openModal("pro", state.activeAsset, {
-    feature: `${plan.name} erforderlich`,
-    benefit: `${feature}: ${benefit || plan.audience} Empfohlener Plan: ${plan.name}.`
+    feature: feature || `${plan.name} erforderlich`,
+    requiredPlan: plan.name,
+    benefit: benefit || plan.audience
   });
 }
 
@@ -616,6 +840,7 @@ function saveNotes() {
 
 function saveAlerts() {
   localStorage.setItem("marketpilot-alerts", JSON.stringify(state.alerts));
+  localStorage.setItem("alerts", JSON.stringify(state.alerts));
 }
 
 function saveGroups() {
@@ -638,7 +863,10 @@ function saveProState() {
   localStorage.setItem("isProUser", String(state.isProUser));
   localStorage.setItem("accessMethod", state.accessMethod || state.proAccessMethod || "");
   localStorage.setItem("proAccessMethod", state.proAccessMethod || "");
+  localStorage.setItem("planSource", state.planSource || state.accessMethod || "free");
   localStorage.setItem("selectedBillingCycle", state.checkoutPlan || "monthly");
+  localStorage.setItem("savedReports", JSON.stringify(state.savedReports || []));
+  localStorage.setItem("marketpilot-saved-reports", JSON.stringify(state.savedReports || []));
   if (state.planActivatedAt) localStorage.setItem("planActivatedAt", state.planActivatedAt);
 }
 
@@ -647,6 +875,7 @@ function activatePlan(plan, method) {
   syncPlanFlags();
   state.accessMethod = method;
   state.proAccessMethod = method;
+  state.planSource = method || state.currentPlan;
   state.planActivatedAt = new Date().toISOString();
   saveProState();
   updateProUI();
@@ -663,6 +892,8 @@ function activatePro(method) {
 function saveAssistant() {
   localStorage.setItem("marketpilot-assistant", JSON.stringify(state.assistantMessages.slice(-20)));
   localStorage.setItem("marketpilot-assistant-daily", JSON.stringify(state.assistantDaily));
+  localStorage.setItem("aiQuestionsUsedToday", String(state.assistantDaily[todayKey()] || 0));
+  localStorage.setItem("lastAiQuestionResetDate", todayKey());
 }
 
 function saveSmartAlerts() {
@@ -679,7 +910,7 @@ function todayKey() {
 }
 
 function remainingAssistantQuestions() {
-  const limit = currentPlanConfig().aiLimit;
+  const limit = getPlanLimit("aiQuestions");
   if (limit === Infinity) return "∞";
   const used = state.assistantDaily[todayKey()] || 0;
   return Math.max(0, limit - used);
@@ -703,18 +934,18 @@ function updateProUI() {
   selectors.accessCodeButton.textContent = state.isProUser ? `${plan.name} aktiv` : "Nexus Code";
   if (selectors.navProStatus) selectors.navProStatus.textContent = `${plan.name}`;
   selectors.openAccessModal.textContent = state.isProUser ? "Code verwalten" : "Code einlösen";
-  if (selectors.openCheckout) selectors.openCheckout.textContent = state.isProUser ? "Pro Dashboard öffnen" : "Pro kaufen";
+  if (selectors.openCheckout) selectors.openCheckout.textContent = state.isProUser ? `${plan.name} Dashboard öffnen` : "Pro kaufen";
   selectors.openAccessModal.setAttribute("aria-pressed", String(state.isProUser));
-  if (selectors.proPlanButton) selectors.proPlanButton.textContent = hasPlan("pro") ? "Pro Dashboard öffnen" : "Pro kaufen";
-  if (selectors.proPlanBadge) selectors.proPlanBadge.textContent = hasPlan("pro") ? "PRO AKTIV" : "POWER-MODUS";
+  if (selectors.proPlanButton) selectors.proPlanButton.textContent = hasPlan("pro") ? `${plan.name} Dashboard öffnen` : "Pro kaufen";
+  if (selectors.proPlanBadge) selectors.proPlanBadge.textContent = hasPlan("pro") ? `${plan.name.toUpperCase()} AKTIV` : "POWER-MODUS";
   if (selectors.proPlanStatusNote) {
     selectors.proPlanStatusNote.hidden = !state.isProUser;
-    selectors.proPlanStatusNote.textContent = state.isProUser ? `Dein Pro-Zugang ist aktiv. ${methodLabel}`.trim() : "Für Nutzer, die ihre Watchlist täglich verstehen wollen.";
+    selectors.proPlanStatusNote.textContent = state.isProUser ? `Dein ${plan.name}-Zugang ist aktiv. ${methodLabel}`.trim() : "Für Nutzer, die ihre Watchlist täglich verstehen wollen.";
   }
   if (selectors.pricingAccessCode) selectors.pricingAccessCode.hidden = state.isProUser;
   if (selectors.proPriceLabel) selectors.proPriceLabel.textContent = state.checkoutPlan === "yearly" ? "119,99 €" : "12,99 €";
-  selectors.resetDemoAccess.hidden = true;
-  selectors.resetDemoAccessLegal.hidden = true;
+  selectors.resetDemoAccess.hidden = false;
+  selectors.resetDemoAccessLegal.hidden = false;
   selectors.assistantQuota.textContent = remainingAssistantQuestions();
   if (selectors.assistantLimit) {
     selectors.assistantLimit.textContent = plan.aiLimit === Infinity ? `Plan: ${plan.name} · unbegrenzte Fragen` : `Plan: ${plan.name} · ${remainingAssistantQuestions()}/${plan.aiLimit} Fragen übrig`;
@@ -762,7 +993,8 @@ function updateAssistantSuggestions() {
 function planButtonLabel(plan) {
   const key = normalizePlan(plan);
   if (key === state.currentPlan) return "Aktueller Plan";
-  if (key === "business") return hasPlan("business") ? "Plan verwalten" : "Kontakt aufnehmen";
+  if (planRank(key) < planRank(state.currentPlan)) return `In ${currentPlanConfig().name} enthalten`;
+  if (key === "business") return hasPlan("business") ? "Business Dashboard öffnen" : "Kontakt aufnehmen";
   if (planRank(key) > planRank(state.currentPlan)) return key === "starter" ? "Starter wählen" : `Upgrade auf ${PLAN_CONFIG[key].name}`;
   return "Plan verwalten";
 }
@@ -771,6 +1003,7 @@ function renderPricing() {
   const section = document.querySelector("#pricing");
   if (!section) return;
   const cycle = state.checkoutPlan === "yearly" ? "yearly" : "monthly";
+  const current = currentPlanConfig();
   const plans = PLAN_ORDER.map((key) => {
     const plan = PLAN_CONFIG[key];
     const active = key === state.currentPlan;
@@ -778,7 +1011,7 @@ function renderPricing() {
     const price = cycle === "yearly" ? plan.yearly : plan.monthly;
     const period = key === "business" ? (cycle === "yearly" ? "pro Jahr" : "pro Monat") : (cycle === "yearly" ? "pro Jahr" : "pro Monat");
     return `
-      <article class="pricing-plan plan-${plan.accent} ${active ? "active-plan" : ""} ${key === "pro" ? "sweet-spot" : ""} ${key === "elite" ? "elite-plan" : ""}">
+      <article class="pricing-plan plan-${plan.accent} ${active ? "active-plan" : ""} ${key === "pro" ? "sweet-spot" : ""} ${key === "elite" ? "elite-plan" : ""} ${key === "business" ? "business-plan" : ""}">
         <div class="plan-topline">
           <span class="plan-name">${escapeHTML(plan.name)}</span>
           <span class="plan-badge">${active ? "Aktuell" : escapeHTML(plan.badge)}</span>
@@ -789,6 +1022,13 @@ function renderPricing() {
           <span>${escapeHTML(period)}</span>
         </div>
         ${cycle === "yearly" && key !== "free" ? `<span class="saving-badge">2 Monate sparen</span>` : ""}
+        <div class="feature-badges">
+          ${[
+            key === "pro" ? "Popular" : plan.badge,
+            plan.aiLimit === Infinity ? "Unlimited" : `${plan.aiLimit} AI`,
+            plan.reportLevel.includes("Report") ? "Report" : "Limited"
+          ].map((badge) => `<span>${escapeHTML(badge)}</span>`).join("")}
+        </div>
         <ul class="plan-features">
           ${plan.features.map((feature) => `<li>${escapeHTML(feature)}</li>`).join("")}
         </ul>
@@ -802,23 +1042,20 @@ function renderPricing() {
     `;
   }).join("");
   const compareRows = [
-    ["Watchlist", "3 Werte", "10 Werte", "Unbegrenzt", "Unbegrenzt + Gruppen", "Team-Watchlists"],
-    ["AI Assistant", "Kurz", "Basis-Kontext", "Unbegrenzt", "Advanced AI", "Team-Kontext"],
-    ["AI-Fragen pro Tag", "3", "10", "Unbegrenzt", "Unbegrenzt", "Team-Limits"],
-    ["Briefing", "Basis", "Watchlist-Basis", "AI Watchlist Briefing", "Saved Briefings", "Team Reports"],
-    ["News Impact", "Basis-News", "Basis-Impact", "Watchlist-Impact", "Advanced Impact", "API-/Team-Impact"],
-    ["Alerts", "1 Preisalarm", "5 Preisalarme", "25 Smart Alerts", "Advanced Alerts", "Team Alerts"],
-    ["Deep Asset Analysis", "Nein", "Basis-Kennzahlen", "Aktien/ETF/Krypto", "Advanced", "Team-Workflows"],
-    ["Compare", "Nein", "2 Assets", "4 Assets", "Advanced Compare", "Team Compare"],
-    ["Reports", "Nein", "Nein", "Preview", "PDF/CSV Preview", "Team Reports"],
-    ["API", "Nein", "Nein", "Nein", "Nein", "Vorbereitet"],
-    ["Support", "Community", "Basis", "Priorisiert", "Early Access", "Priorisiert"]
+    ["AI & Briefings", "3 kurze Fragen", "10 Fragen + Basis-Briefing", "Unbegrenzt + Watchlist Pulse", "Advanced AI + Saved Briefings", "Team-Kontext + Shared Briefings"],
+    ["Watchlist & Alerts", "3 Werte, 1 Alarm", "10 Werte, 5 Alarme", "Unbegrenzt, 25 Smart Alerts", "Gruppen + Advanced Alerts", "Team-Watchlists + Shared Alerts"],
+    ["Analyse & Daten", "Basis-Übersicht", "Basis-Kennzahlen", "Deep Asset Analysis", "Scenario + Advanced Compare", "Business Workflows + Data Settings"],
+    ["News Impact", "Basis-News", "Basis-Impact", "Watchlist-Impact", "Advanced Impact", "Team-News-Impact + API"],
+    ["Reports & Export", "Nein", "Basis-Briefing", "Report Preview", "Saved Reports + PDF/CSV Preview", "Team Reports + Compliance Export"],
+    ["Learning & Erklärungen", "Tooltips", "Tooltips + Beispiele", "Assetbezogene Erklärungen", "Chart-/Kennzahlen-Kontext", "Team-Schulungsmodus"],
+    ["Team & Business", "Nein", "Nein", "Nein", "Nein", "Rollen, Admin, API, Audit Log"],
+    ["Support & Zugriff", "Community", "Basis", "Priorisierte Module", "Early Access Labs", "Priorisierter Support"]
   ];
   section.innerHTML = `
     <div class="section-heading">
       <p class="eyebrow">Preise</p>
-      <h2>Starte kostenlos. Skaliere dein AI-Finance-Cockpit nach Bedarf.</h2>
-      <p>Free zum Testen, Starter für kleine Watchlists, Pro als Sweet Spot, Elite für Power-User und Business für Teams.</p>
+      <h2>Wähle dein Markt-Cockpit</h2>
+      <p>Free zum Testen, Starter für kleine Watchlists, Pro für tägliche AI-Briefings, Elite für Power-User und Business für Teams.</p>
     </div>
     <div class="pricing-toolbar">
       <div>
@@ -831,6 +1068,36 @@ function renderPricing() {
       </div>
     </div>
     <div class="pricing-grid subscription-grid">${plans}</div>
+    <section class="feature-outcome-panel">
+      <div class="section-heading compact">
+        <p class="eyebrow">Feature by Outcome</p>
+        <h2>Wofür du bezahlst: weniger Sucharbeit, mehr Kontext.</h2>
+      </div>
+      <div class="feature-outcome-grid">
+        ${FEATURE_OUTCOMES.map(([title, text]) => `
+          <article>
+            <span class="feature-icon" aria-hidden="true">${escapeHTML(title.slice(0, 1))}</span>
+            <strong>${escapeHTML(title)}</strong>
+            <p>${escapeHTML(text)}</p>
+          </article>
+        `).join("")}
+      </div>
+    </section>
+    <section class="plan-example-panel">
+      <div class="section-heading compact">
+        <p class="eyebrow">Beispiele</p>
+        <h2>So fühlt sich jeder Plan im Alltag an.</h2>
+      </div>
+      <div class="plan-example-grid">
+        ${PLAN_EXAMPLES.map(([key, text]) => `
+          <article class="plan-example plan-${key}">
+            <span>${escapeHTML(PLAN_CONFIG[key].name)}</span>
+            <strong>${escapeHTML(text)}</strong>
+            <small>${escapeHTML(PLAN_CONFIG[key].audience)}</small>
+          </article>
+        `).join("")}
+      </div>
+    </section>
     <section class="plan-fit-panel" aria-label="Welcher Plan passt zu dir?">
       <div class="section-heading compact">
         <p class="eyebrow">Plan-Finder</p>
@@ -850,18 +1117,43 @@ function renderPricing() {
     <section class="account-plan-panel">
       <div>
         <span class="panel-label">Account & Plan</span>
-        <h3>${escapeHTML(currentPlanConfig().name)} aktiv</h3>
-        <p>Billing: ${cycle === "yearly" ? "Jährlich" : "Monatlich"} · Zugang: ${state.accessMethod || state.proAccessMethod || "Free"} · AI-Fragen heute: ${remainingAssistantQuestions()}</p>
+        <h3>${escapeHTML(current.name)} aktiv</h3>
+        <p>${state.currentPlan === "business" && state.accessMethod === "code" ? "Business-Zugang aktiv · per Nexus Code" : `Billing: ${cycle === "yearly" ? "Jährlich" : "Monatlich"} · Zugang: ${state.accessMethod || state.proAccessMethod || "Free"}`} · AI-Fragen heute: ${remainingAssistantQuestions()}</p>
       </div>
       <div class="account-plan-metrics">
-        <span>Watchlist <b>${planLimitLabel(currentPlanConfig().watchlistLimit)}</b></span>
-        <span>Alerts <b>${planLimitLabel(currentPlanConfig().alertLimit)}</b></span>
-        <span>Compare <b>${planLimitLabel(currentPlanConfig().compareLimit)}</b></span>
+        <span>Watchlist <b>${planLimitLabel(current.watchlistLimit)}</b></span>
+        <span>Alerts <b>${planLimitLabel(current.alertLimit)}</b></span>
+        <span>Compare <b>${planLimitLabel(current.compareLimit)}</b></span>
+        <span>Reports <b>${escapeHTML(current.reportLevel)}</b></span>
+        <span>Export <b>${escapeHTML(current.exportLevel)}</b></span>
+        <span>News Impact <b>${escapeHTML(current.newsImpactLevel)}</b></span>
+        <span>Learning <b>${escapeHTML(current.learningLevel)}</b></span>
       </div>
       <div class="detail-actions">
         <button class="primary-action" type="button" data-plan-key="${state.currentPlan === "free" ? "pro" : state.currentPlan}">${state.currentPlan === "free" ? "Upgrade" : "Plan verwalten"}</button>
-        <button class="secondary-action" type="button" data-open-pricing-code>Nexus Code einlösen</button>
+        <button class="secondary-action" type="button" data-open-pricing-code>Nexus Code</button>
+        <button class="link-action" type="button" data-reset-demo-access>Demo-Zugang zurücksetzen</button>
       </div>
+    </section>
+    <section class="labs-suite-grid">
+      <article class="elite-labs-panel">
+        <div class="section-heading compact">
+          <p class="eyebrow">Elite Labs</p>
+          <h2>Power-Module für tiefere Analyse.</h2>
+        </div>
+        <div class="module-chip-grid">
+          ${ELITE_LABS_MODULES.map((module) => `<button type="button" data-feature-module="scenarioAnalysis" class="${hasPlan("elite") ? "unlocked" : "locked"}">${escapeHTML(module)}<span>${hasPlan("elite") ? "Aktiv" : "Elite"}</span></button>`).join("")}
+        </div>
+      </article>
+      <article class="business-suite-panel">
+        <div class="section-heading compact">
+          <p class="eyebrow">Business Suite</p>
+          <h2>Team, API und professionelle Workflows.</h2>
+        </div>
+        <div class="module-chip-grid">
+          ${BUSINESS_SUITE_MODULES.map((module) => `<button type="button" data-feature-module="teamDashboard" class="${hasPlan("business") ? "unlocked" : "locked"}">${escapeHTML(module)}<span>${hasPlan("business") ? "Aktiv" : "Business"}</span></button>`).join("")}
+        </div>
+      </article>
     </section>
     <div class="pricing-compare subscription-compare">
       <table>
@@ -884,6 +1176,7 @@ function checkoutPriceCopy() {
 function updateCheckoutUI() {
   const target = PLAN_CONFIG[normalizePlan(state.checkoutTargetPlan)];
   const copy = checkoutPriceCopy();
+  selectors.checkoutModal.dataset.plan = normalizePlan(state.checkoutTargetPlan);
   document.querySelector("#checkoutTitle").textContent = `${target.name} starten`;
   document.querySelector(".checkout-copy").textContent = target.audience;
   document.querySelector(".checkout-summary .panel-label").textContent = "Dein Plan";
@@ -899,11 +1192,37 @@ function updateCheckoutUI() {
   if (selectors.proPriceLabel) selectors.proPriceLabel.textContent = state.checkoutPlan === "yearly" ? PLAN_CONFIG.pro.yearly : PLAN_CONFIG.pro.monthly;
 }
 
-function startCheckout(plan = "pro") {
+function openBusinessContactModal() {
+  state.modalMode = "business";
+  state.modalSymbol = state.activeAsset.symbol;
+  selectors.modal.hidden = false;
+  selectors.modalChart.hidden = true;
+  selectors.modalInput.parentElement.hidden = true;
+  selectors.modalConfirm.hidden = true;
+  selectors.modalKicker.textContent = "Business Suite";
+  selectors.modalTitle.textContent = "Business anfragen";
+  selectors.modalBody.innerHTML = `
+    <div class="business-contact-form">
+      <p>Für Teams, API, Rollen, Compliance Export, Shared Watchlists und professionelle Reports.</p>
+      <label>Name<input type="text" id="businessName" placeholder="Name"></label>
+      <label>E-Mail<input type="email" id="businessEmail" placeholder="team@firma.de"></label>
+      <label>Teamgröße<select id="businessTeamSize"><option>2-5</option><option>6-20</option><option>21-100</option><option>100+</option></select></label>
+      <label>Gewünschte Funktionen<input type="text" id="businessFeatures" placeholder="API, Team Reports, Rollen, Compliance"></label>
+      <label>Nachricht<textarea id="businessMessage" rows="3" placeholder="Was soll MarketPilot Nexus für dein Team leisten?"></textarea></label>
+      <div class="detail-actions">
+        <button class="primary-action" type="button" data-business-request-submit>Anfrage vorbereiten</button>
+        <button class="link-action" type="button" data-open-access-from-modal>Ich habe einen Nexus Code</button>
+      </div>
+    </div>
+  `;
+}
+
+function startCheckout(plan = "pro", billingCycle = state.checkoutPlan) {
+  if (billingCycle === "monthly" || billingCycle === "yearly") state.checkoutPlan = billingCycle;
   const normalized = normalizePlan(plan === "monthly" || plan === "yearly" ? "pro" : plan);
   if (normalized === "business") {
-    showToast("Business-Anfrage geöffnet. Wir melden uns mit Team- und API-Optionen.");
-    openModal("pro", state.activeAsset, { feature: "Business anfragen", benefit: "Team-Dashboard, API, Reports, Admin-Funktionen und professionelle Workflows." });
+    state.checkoutTargetPlan = "business";
+    openBusinessContactModal();
     return;
   }
   state.checkoutTargetPlan = normalized;
@@ -2004,6 +2323,7 @@ function updateWatchlistButton() {
 
 function saveWatchlist() {
   localStorage.setItem("marketpilot-watchlist", JSON.stringify([...state.savedSymbols]));
+  localStorage.setItem("watchlist", JSON.stringify([...state.savedSymbols]));
 }
 
 function renderSavedWatchlist() {
@@ -2011,7 +2331,7 @@ function renderSavedWatchlist() {
   document.querySelector("#widgetWatchlist").textContent = `${savedAssets.length} Assets`;
   if (!savedAssets.length) {
     selectors.savedWatchlist.innerHTML = `
-      <article data-symbol="${asset.symbol}" tabindex="0">
+      <article tabindex="0">
         <span class="panel-label">Noch leer</span>
         <strong>Watchlist erstellen</strong>
         <p>Füge in „Märkte“ Werte hinzu. Später entstehen daraus persönliche Briefings, Preisalarme und News-Hinweise.</p>
@@ -2200,10 +2520,10 @@ function toggleWatchlist(asset) {
     state.savedSymbols.delete(asset.symbol);
     showToast(`${asset.name} wurde aus der Watchlist entfernt.`);
   } else {
-    const limit = currentPlanConfig().watchlistLimit;
+    const limit = getPlanLimit("watchlist");
     if (state.savedSymbols.size >= limit) {
       const required = state.currentPlan === "free" ? "starter" : "pro";
-      openUpgradeModal(required, "Watchlist-Limit erreicht", `${currentPlanConfig().name} erlaubt ${planLimitLabel(limit)} Watchlist-Werte. ${PLAN_CONFIG[required].name} erweitert dein Limit.`);
+      openUpgradeModal(required, "Watchlist-Limit erreicht", `${currentPlanConfig().name} erlaubt ${planLimitLabel(limit)} Watchlist-Werte. ${required === "starter" ? "Starter macht kleine Watchlists nutzbar." : featureUpgradeCopy("unlimitedWatchlist")}`);
       return;
     }
     state.savedSymbols.add(asset.symbol);
@@ -2220,14 +2540,14 @@ function toggleCompare(asset) {
     state.compareSymbols.delete(asset.symbol);
     showToast(`${asset.name} wurde aus dem Vergleich entfernt.`);
   } else {
-    const limit = currentPlanConfig().compareLimit;
+    const limit = getPlanLimit("compare");
     if (limit === 0) {
       openUpgradeModal("starter", "Compare erforderlich", "Starter schaltet den Vergleich mit 2 Assets frei. Pro erweitert Compare auf bis zu 4 Assets.");
       return;
     }
     if (state.compareSymbols.size >= limit) {
       const required = hasPlan("pro") ? "elite" : "pro";
-      openUpgradeModal(required, "Compare-Limit erreicht", `${currentPlanConfig().name} erlaubt ${planLimitLabel(limit)} Compare-Assets. ${PLAN_CONFIG[required].name} erweitert den Vergleich.`);
+      openUpgradeModal(required, "Compare-Limit erreicht", `${currentPlanConfig().name} erlaubt ${planLimitLabel(limit)} Compare-Assets. ${PLAN_CONFIG[required].name} erweitert den Vergleich mit Score-Matrix und Szenario-Kontext.`);
       return;
     }
     state.compareSymbols.add(asset.symbol);
@@ -2260,17 +2580,19 @@ function openModal(mode, asset, meta = {}) {
           ? learningCopy(meta.term)
           : "Lege einen Preisalarm an. Der Zielwert bleibt lokal in deinem Browser gespeichert.";
   if (mode === "pro") {
+    const required = PLAN_CONFIG[normalizePlan(state.checkoutTargetPlan)];
     selectors.modalBody.innerHTML = `
       <div class="upgrade-preview">
         <strong>${escapeHTML(meta.feature || "Pro Feature")}</strong>
-        <p>${escapeHTML(meta.benefit || "Pro erweitert den AI-Kontext um Watchlist, News, Risiko und Vergleichsdaten.")}</p>
+        <p>${escapeHTML(meta.benefit || required.audience)}</p>
         <ul>
-          <li>Kontext aus aktivem Asset, Watchlist, News und Alerts</li>
-          <li>Deep-Dive-Preview mit Confidence/Data Quality</li>
-          <li>Report-, Briefing- und Smart-Alert-Workflows</li>
+          <li>Benötigter Plan: ${escapeHTML(meta.requiredPlan || required.name)}</li>
+          <li>Demo-Vorschau: ${escapeHTML(featureUpgradeCopy(meta.featureKey || ""))}</li>
+          <li>Kontext aus Asset, Watchlist, News, Risiko und Alerts</li>
         </ul>
         <div class="detail-actions">
-          <button class="primary-action" type="button" data-open-checkout-from-modal>Pro kaufen</button>
+          <button class="primary-action" type="button" data-open-checkout-from-modal>${escapeHTML(required.name)} ${normalizePlan(state.checkoutTargetPlan) === "business" ? "anfragen" : "kaufen"}</button>
+          <button class="secondary-action" type="button" data-open-pricing-from-modal>Pläne vergleichen</button>
           <button class="link-action" type="button" data-open-access-from-modal>Code einlösen</button>
         </div>
       </div>
@@ -2593,9 +2915,25 @@ function generateAssistantResponse(message, context = assistantContext()) {
   const quote = state.quoteCache.get(active.symbol) || context.quote;
   const movement = formatPercent(quote?.changePct);
   const relevantNews = context.newsItems.filter((item) => item.assets.includes(active.symbol) || item.type.includes(active.type)).slice(0, 2);
-  const proLine = context.isProUser
-    ? `Pro-Kontext aktiv: Watchlist (${context.watchlist.length}), Compare (${context.compareList.length}), Alerts (${Object.keys(state.alerts).length + state.smartAlerts.length}), News Impact und Datenqualität werden einbezogen.`
-    : "Free-Kontext: kurze Basisantwort. Pro ergänzt Watchlist-Kontext, News Impact, Deep Dive, Compare und Reports.";
+  const plan = currentPlanConfig();
+  const proLine = hasPlan("business")
+    ? `Business-Kontext aktiv: Team-Reports, Shared Watchlists, Admin/API-Workflows, Watchlist (${context.watchlist.length}) und Alerts (${Object.keys(state.alerts).length + state.smartAlerts.length}) werden einbezogen.`
+    : hasPlan("elite")
+      ? `Elite-Kontext aktiv: Advanced AI, Szenarioanalyse, Reports, Export-Preview, Watchlist-Gruppen und News Impact werden einbezogen.`
+      : hasPlan("pro")
+        ? `Pro-Kontext aktiv: Watchlist (${context.watchlist.length}), Compare (${context.compareList.length}), Alerts (${Object.keys(state.alerts).length + state.smartAlerts.length}), News Impact und Datenqualität werden einbezogen.`
+        : state.currentPlan === "starter"
+          ? "Starter-Kontext: Basis-Watchlist, 10 AI-Fragen, Basis-News Impact und einfache Erklärungen sind aktiv."
+          : "Free-Kontext: kurze Basisantwort. Starter erhöht Limits, Pro ergänzt Watchlist Pulse, Smart Alerts, Deep Dive, Compare und Reports.";
+  const planDepth = hasPlan("business")
+    ? ["Team-/Report-Hinweis", "Für Business eignet sich daraus ein Team-Briefing mit Verantwortlichkeiten, Export und API-/Admin-Folgeworkflow."]
+    : hasPlan("elite")
+      ? ["Szenario", "Elite kann daraus eine Szenarioanalyse, Report-Zusammenfassung und Export-Preview vorbereiten."]
+      : hasPlan("pro")
+        ? ["Nächste Pro-Aktion", "Prüfe Watchlist Pulse, News Impact, offene Alerts und Deep Asset Analysis."]
+        : state.currentPlan === "starter"
+          ? ["Nächster Starter-Schritt", "Nutze Basis-Watchlist-Briefing und Preisalarme für die wichtigsten 10 Werte."]
+          : ["Upgrade-Kontext", "Für mehr Watchlist-Kontext, Smart Alerts und Deep Dives ist Pro der passende Sweet Spot."];
 
   if (lower.includes("watchlist")) {
     if (!context.watchlist.length) {
@@ -2667,7 +3005,8 @@ function generateAssistantResponse(message, context = assistantContext()) {
     ["Kurzfazit", `${active.name} (${active.symbol}) ist im Fokus. Bewegung ${movement}, Risiko ${active.risk}, AI-Sentiment ${sentimentFromChange(quote?.changePct)}.`],
     ["Was die Daten zeigen", `${active.type} · ${assetSector(active)} · Zeitraum ${context.activeTimeframe} · Datenqualität ${confidenceScore(context)}.`],
     ["Mögliche Gründe", relevantNews.length ? `News-Kontext: ${relevantNews.map((item) => item.title).join(" · ")}.` : "Mögliche Treiber sind Marktstimmung, Sektorbewegung, Volatilität und Datenqualität."],
-    ["Pro-Kontext", proLine],
+    [plan.name, proLine],
+    planDepth,
     ["Hinweis", "Keine Anlageberatung."]
   ]);
 }
@@ -2679,7 +3018,7 @@ function renderAssistantMessages() {
 
 function askAssistant(question) {
   const key = todayKey();
-  const limit = currentPlanConfig().aiLimit;
+  const limit = getPlanLimit("aiQuestions");
   if (limit !== Infinity && (state.assistantDaily[key] || 0) >= limit) {
     const required = state.currentPlan === "free" ? "starter" : "pro";
     openUpgradeModal(required, "AI-Fragen-Limit erreicht", `${currentPlanConfig().name} erlaubt ${limit} AI-Fragen pro Tag. ${PLAN_CONFIG[required].name} erweitert deine Nutzung.`);
@@ -3056,6 +3395,17 @@ selectors.drawerClose.addEventListener("click", () => {
 selectors.modalClose.addEventListener("click", closeModal);
 selectors.modalCancel.addEventListener("click", closeModal);
 selectors.modal.addEventListener("click", (event) => {
+  if (event.target.closest("[data-business-request-submit]")) {
+    closeModal();
+    showToast("Business-Anfrage vorbereitet.");
+    setActiveView("pricing");
+    return;
+  }
+  if (event.target.closest("[data-open-pricing-from-modal]")) {
+    closeModal();
+    setActiveView("pricing");
+    return;
+  }
   if (event.target.closest("[data-open-access-from-modal]")) {
     closeModal();
     openAccessModal();
@@ -3091,7 +3441,7 @@ selectors.modalConfirm.addEventListener("click", () => {
   if (state.modalMode === "alert") {
     const existing = Boolean(state.alerts[asset.symbol]);
     const alertCount = Object.keys(state.alerts).length;
-    const limit = currentPlanConfig().alertLimit;
+    const limit = getPlanLimit("alerts");
     if (!existing && alertCount >= limit) {
       const required = state.currentPlan === "free" ? "starter" : state.currentPlan === "starter" ? "pro" : "elite";
       openUpgradeModal(required, "Alert-Limit erreicht", `${currentPlanConfig().name} erlaubt ${planLimitLabel(limit)} aktive Alerts. ${PLAN_CONFIG[required].name} erweitert deine Alarm-Workflows.`);
@@ -3185,6 +3535,21 @@ document.querySelector("#pricing")?.addEventListener("click", (event) => {
     openAccessModal();
     return;
   }
+  if (event.target.closest("[data-reset-demo-access]")) {
+    resetDemoAccess();
+    return;
+  }
+  const featureModule = event.target.closest("[data-feature-module]");
+  if (featureModule) {
+    const feature = featureModule.dataset.featureModule;
+    const required = getUpgradeTargetForFeature(feature);
+    if (hasPlan(required)) {
+      showToast(`${featureModule.textContent.replace(/Aktiv|Elite|Business/g, "").trim()} ist freigeschaltet.`);
+    } else {
+      openUpgradeModal(required, featureModule.textContent.replace(/Elite|Business/g, "").trim(), featureUpgradeCopy(feature));
+    }
+    return;
+  }
   const fit = event.target.closest("[data-plan-fit]");
   if (fit) {
     const plan = PLAN_CONFIG[normalizePlan(fit.dataset.planFit)];
@@ -3246,7 +3611,7 @@ selectors.completeCheckout?.addEventListener("click", () => {
   window.setTimeout(() => {
     activatePlan(state.checkoutTargetPlan, "purchase");
     selectors.checkoutMessage.textContent = `${target.name} aktiviert.`;
-    selectors.completeCheckout.textContent = "Zum Pro Dashboard";
+    selectors.completeCheckout.textContent = `${target.name} öffnen`;
     selectors.completeCheckout.disabled = false;
     state.checkoutLoading = false;
     setActiveView(hasPlan("pro") ? "pro" : "dashboard");
@@ -3307,6 +3672,7 @@ function resetDemoAccess() {
   syncPlanFlags();
   state.accessMethod = "";
   state.proAccessMethod = "";
+  state.planSource = "free";
   state.planActivatedAt = "";
   saveProState();
   updateProUI();
@@ -3332,7 +3698,10 @@ selectors.openProDashboard?.addEventListener("click", () => {
 selectors.proDashboard?.addEventListener("click", (event) => {
   const action = event.target.closest("[data-pro-dashboard-action]")?.dataset.proDashboardAction;
   if (action) runProDashboardAction(action);
-  if (event.target.closest("[data-report-export]")) showToast("Export bereit. PDF-Export ist als Preview markiert.");
+  if (event.target.closest("[data-report-export]")) {
+    if (!requirePlan("elite", "PDF/CSV Export Preview", featureUpgradeCopy("pdfExport"))) return;
+    showToast("Export bereit. PDF-/CSV-Export ist als Elite Preview markiert.");
+  }
 });
 
 selectors.premiumGrid?.addEventListener("click", (event) => {
@@ -3404,7 +3773,7 @@ selectors.generateWatchlistBriefing.addEventListener("click", () => {
 selectors.createSmartAlert.addEventListener("click", () => {
   const type = selectors.smartAlertType.value;
   if (type !== "price" && !requirePlan("pro", "Smart Alerts", "Pro schaltet Volatilitäts-, News-Impact- und Trendalarme frei.")) return;
-  const limit = currentPlanConfig().alertLimit;
+  const limit = getPlanLimit("smartAlerts");
   if (state.smartAlerts.length >= limit) {
     const required = hasPlan("pro") ? "elite" : "pro";
     openUpgradeModal(required, "Smart-Alert-Limit erreicht", `${currentPlanConfig().name} erlaubt ${planLimitLabel(limit)} Smart Alerts. ${PLAN_CONFIG[required].name} erweitert deine Alert-Regeln.`);
