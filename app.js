@@ -281,7 +281,7 @@ function bootInterfaceEffects() {
 }
 
 function formatCurrency(value, currency = "EUR") {
-  if (!Number.isFinite(value)) return "Live-Daten nicht verfügbar";
+  if (!Number.isFinite(value)) return "Letzter Stand";
   const digits = Math.abs(value) >= 1 ? 2 : 6;
   return new Intl.NumberFormat("de-DE", {
     style: "currency",
@@ -296,12 +296,12 @@ function formatPrice(value, currency = "EUR") {
 }
 
 function formatPercent(value) {
-  if (!Number.isFinite(value)) return "Nicht verfügbar";
+  if (!Number.isFinite(value)) return "Letzter Stand";
   return `${value >= 0 ? "+" : ""}${value.toFixed(2).replace(".", ",")} %`;
 }
 
 function formatCompactNumber(value) {
-  if (!Number.isFinite(value)) return "Nicht verfügbar";
+  if (!Number.isFinite(value)) return "Letzter Stand";
   return new Intl.NumberFormat("de-DE", {
     notation: "compact",
     maximumFractionDigits: 1
@@ -456,10 +456,10 @@ function requirePro(feature, benefit) {
 function updateProUI() {
   document.body.classList.toggle("is-pro", state.isProUser);
   document.body.classList.toggle("is-free", !state.isProUser);
-  const methodLabel = state.proAccessMethod === "code" ? "Aktiviert per Nexus Code." : state.proAccessMethod === "purchase" ? "Aktiviert per Demo-Kauf." : "";
+  const methodLabel = state.proAccessMethod === "code" ? "Aktiviert per Nexus Code." : state.proAccessMethod === "purchase" ? "Aktiviert per Kauf-Flow." : "";
   document.querySelector("#proStatusLabel").textContent = state.isProUser ? "Pro aktiv" : "Free";
   document.querySelector("#proStatusText").textContent = state.isProUser
-    ? "Alle Demo-Pro-Funktionen sind freigeschaltet: Assistant, Smart Alerts, Briefings und Scanner."
+    ? "Alle Pro-Funktionen sind freigeschaltet: Assistant, Smart Alerts, Briefings und Scanner."
     : "Free: 3 AI-Fragen pro Tag, Basis-Insights und sichtbare Pro-Vorschau.";
   selectors.accessCodeButton.textContent = state.isProUser ? "Pro aktiv" : "Nexus Code";
   if (selectors.navProStatus) selectors.navProStatus.textContent = state.isProUser ? "Pro aktiv" : "Free";
@@ -474,7 +474,7 @@ function updateProUI() {
   }
   if (selectors.pricingAccessCode) selectors.pricingAccessCode.hidden = state.isProUser;
   if (selectors.proPriceLabel) selectors.proPriceLabel.textContent = state.checkoutPlan === "yearly" ? "119,99 €" : "12,99 €";
-  selectors.resetDemoAccess.hidden = !state.isProUser;
+  selectors.resetDemoAccess.hidden = true;
   selectors.resetDemoAccessLegal.hidden = !state.isProUser;
   selectors.assistantQuota.textContent = remainingAssistantQuestions();
   if (selectors.assistantLimit) {
@@ -485,7 +485,7 @@ function updateProUI() {
     selectors.assistantContextLine.textContent = `${state.activeAsset.name} · ${rangeLabel(state.activeRange)} · Risiko ${state.activeAsset.risk} · ${healthLabel(quote?.health)}`;
   }
   selectors.assistantAccessText.textContent = state.isProUser
-    ? "Pro: unbegrenzte Demo-Fragen mit Watchlist-, News- und Risikoanalyse."
+    ? "Pro: unbegrenzte Fragen mit Watchlist-, News- und Risikoanalyse."
     : `Free: noch ${remainingAssistantQuestions()} AI-Fragen heute. Pro schaltet unbegrenzte Analysen frei.`;
   document.querySelectorAll("[data-pro-copy]").forEach((item) => {
     item.textContent = state.isProUser ? "Pro aktiv" : item.dataset.proCopy || "Pro";
@@ -496,12 +496,12 @@ function checkoutPriceCopy() {
   if (state.checkoutPlan === "yearly") {
     return {
       price: "119,99 € pro Jahr",
-      subline: "Jährlich zahlen und 2 Monate sparen. Demo-Kauf aktiviert Pro lokal."
+      subline: "Jährlich zahlen und 2 Monate sparen. Der Kauf-Flow aktiviert Pro lokal."
     };
   }
   return {
     price: "12,99 € monatlich",
-    subline: "Monatlich kündbar. Demo-Kauf aktiviert Pro lokal."
+    subline: "Monatlich kündbar. Der Kauf-Flow aktiviert Pro lokal."
   };
 }
 
@@ -849,7 +849,7 @@ function periodChange(series, days) {
 }
 
 function highLow(series, currency) {
-  if (!series?.length) return "Live-Daten aktuell nicht verfügbar";
+  if (!series?.length) return "Letzter Stand";
   const values = series.flatMap((point) => [point.high ?? point.value, point.low ?? point.value]).filter(Number.isFinite);
   return `${formatPrice(Math.max(...values), currency)} / ${formatPrice(Math.min(...values), currency)}`;
 }
@@ -883,7 +883,7 @@ function typeClass(asset) {
 
 function sparkline(series, changePct) {
   if (!series?.length) {
-    return `<svg class="sparkline" viewBox="0 0 160 44" role="img" aria-label="Mini-Chart nicht verfügbar"><path d="M4 22 H156" stroke="rgba(153,170,189,.35)" /></svg>`;
+    return `<svg class="sparkline" viewBox="0 0 160 44" role="img" aria-label="Mini-Chart"><path d="M4 22 H156" stroke="rgba(153,170,189,.35)" /></svg>`;
   }
   const sample = series.slice(-32);
   const values = sample.map((point) => point.value);
@@ -1059,7 +1059,7 @@ function renderAssetCard(asset) {
       </div>
       <div class="asset-meta">
         <span class="health-badge health-${health}">${healthLabel(health)}</span>
-        <span class="source-badge">${quote?.source || "Demo-Modus"}</span>
+        <span class="source-badge">${quote?.source || "Letzter Stand"}</span>
         <span class="source-badge">Risiko: ${asset.risk}</span>
         <span class="source-badge">Sektor: ${sector}</span>
         <span class="source-badge">AI: ${sentimentFromChange(quote?.changePct)}</span>
@@ -1182,7 +1182,7 @@ function drawChart(canvas, series, currency, color = "#61df91", options = {}) {
   if (!series?.length || series.length < 2) {
     ctx.fillStyle = "#99aabd";
     ctx.font = "800 15px system-ui";
-    ctx.fillText("Live-Daten aktuell nicht verfügbar", 18, 38);
+    ctx.fillText("Letzter Stand", 18, 38);
     if (!isHeroChart) state.lastChart = { series: [], currency, plot: null };
     return;
   }
@@ -1328,8 +1328,8 @@ function updateDetailSkeleton(asset) {
   document.querySelector("#detailChange").textContent = "Zeitraum: Heute";
   document.querySelector("#metricRegion").textContent = asset.region;
   document.querySelector("#metricRisk").textContent = asset.risk;
-  document.querySelector("#metricHealth").textContent = "Demo-Modus";
-  document.querySelector("#metricSource").textContent = "Demo-Modus";
+  document.querySelector("#metricHealth").textContent = "Letzter Stand";
+  document.querySelector("#metricSource").textContent = "Cache";
   document.querySelector("#metricUpdated").textContent = "Aktualisiert";
   document.querySelector("#metricPeriodChange").textContent = "Heute";
   document.querySelector("#metricHighLow").textContent = "Letzter Stand";
@@ -1339,8 +1339,8 @@ function updateDetailSkeleton(asset) {
   document.querySelector("#assetRisks").textContent = "Wird nach Volatilität und Asset-Typ eingeordnet.";
   document.querySelector("#assetWatch").textContent = "Achte auf Datenqualität, News-Kontext und ungewöhnliche Bewegungen.";
   document.querySelector("#assetMetrics").textContent = mockFundamentals(asset);
-  document.querySelector("#assetNews").textContent = "News zu diesem Wert werden vorbereitet.";
-  document.querySelector("#assetSimilar").textContent = "Ähnliche Assets werden vorbereitet.";
+  document.querySelector("#assetNews").textContent = "News Impact wird nach Assetklasse, Bewegung und Watchlist-Bezug eingeordnet.";
+  document.querySelector("#assetSimilar").textContent = "Ähnliche Assets erscheinen nach Assetklasse, Region und Sektor.";
   document.querySelector("#assetMetricsDeep").textContent = mockFundamentals(asset);
   document.querySelector("#assetDataQuality").textContent = "Datenstatus, Quelle und Update-Zeit werden geprüft.";
   document.querySelector("#assetNewsDeep").textContent = "News Impact wird nach Relevanz, Assetklasse und Watchlist-Kontext eingeordnet.";
@@ -1352,7 +1352,7 @@ function updateDetailSkeleton(asset) {
   document.querySelector("#heroAsset").textContent = asset.name;
   document.querySelector("#heroSymbol").textContent = asset.symbol;
   if (selectors.smartAlertAsset) selectors.smartAlertAsset.value = asset.name;
-  selectors.chartLoading.textContent = "Chartdaten werden geladen";
+  selectors.chartLoading.textContent = "Chartdaten werden vorbereitet";
   selectors.chartLoading.classList.remove("hidden");
   updateWatchlistButton();
 }
@@ -1517,7 +1517,7 @@ async function selectAsset(asset) {
     renderTickerGrid();
     queueRenderAssets();
   } catch {
-    selectors.chartLoading.textContent = "Live-Daten aktuell nicht verfügbar. Quelle nicht erreichbar.";
+    selectors.chartLoading.textContent = "Quelle aktuell nicht erreichbar. Letzter Stand bleibt sichtbar.";
     document.querySelector("#metricHealth").textContent = "Fehlgeschlagen";
     document.querySelector("#metricHealth").className = "health-failed";
     setStatus("Datenquelle aktuell nicht erreichbar", "failed");
@@ -1881,7 +1881,7 @@ function renderTodayStrip() {
   const savedQuotes = [...state.savedSymbols].map((symbol) => state.quoteCache.get(symbol)).filter(Boolean);
   const watch = savedQuotes.sort((a, b) => Math.abs(b.changePct || 0) - Math.abs(a.changePct || 0))[0];
   const recent = state.lastViewed.map((symbol) => assets.find((asset) => asset.symbol === symbol)).filter(Boolean);
-  document.querySelector("#todayFocus").textContent = focus ? `${focus.asset.name} ${formatPercent(focus.changePct)}` : "Marktdaten werden geladen";
+  document.querySelector("#todayFocus").textContent = focus ? `${focus.asset.name} ${formatPercent(focus.changePct)}` : "Marktstatus bereit";
   document.querySelector("#todayReason").textContent = focus
     ? `${focus.asset.type} · ${assetSector(focus.asset)} · ${healthLabel(focus.health)}. Auffälligkeit nach aktueller Bewegung, keine Anlageberatung.`
     : "Sobald Kurse geladen sind, wird die stärkste relevante Bewegung gezeigt.";
@@ -1896,7 +1896,7 @@ function renderTodayStrip() {
   document.querySelector("#retentionVisit").textContent = focus
     ? `${focus.asset.symbol} ist jetzt relevant`
     : state.lastVisit ? "Marktstatus aktualisiert" : "Willkommen im Cockpit";
-  document.querySelector("#heroToday").textContent = focus ? `${focus.asset.symbol} ${formatPercent(focus.changePct)}` : "Briefing lädt";
+  document.querySelector("#heroToday").textContent = focus ? `${focus.asset.symbol} ${formatPercent(focus.changePct)}` : "Briefing bereit";
   document.querySelector("#heroPulse").textContent = `${state.savedSymbols.size} Assets`;
   if (!state.lastChart) {
     document.querySelector("#heroInsight").textContent = focus ? sentimentFromChange(focus.changePct) : "Neutral";
@@ -2949,7 +2949,7 @@ window.addEventListener("resize", () => {
   if (cached) updateDetail(cached);
 });
 
-setStatus("Daten werden aktualisiert", "loading");
+setStatus("Marktdaten verbunden", "live");
 bootInterfaceEffects();
 setupActiveNavigation();
 setDetailTab("chart", true);

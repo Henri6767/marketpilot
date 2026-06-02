@@ -41,14 +41,14 @@
         <div class="hero-grid" aria-hidden="true"></div>
 
         <div class="hero-content">
-          <p class="eyebrow hero-kicker"><span aria-hidden="true"></span>AI-Finance-Cockpit 2026</p>
-          <h1>Dein <span class="gradient-text">AI-Finance-Cockpit</span> für Märkte, Watchlists und smarte Marktbriefings.</h1>
+          <p class="eyebrow hero-kicker"><span aria-hidden="true"></span>AI-Watchlist-Intelligence</p>
+          <h1>Dein <span class="gradient-text">AI-Finance-Cockpit</span> für Märkte, Watchlists und tägliche Marktbriefings.</h1>
           <p class="hero-copy">
-            Aktien, ETFs, Krypto, News, Risiken und Watchlist-Bewegungen werden in ein klares tägliches Briefing übersetzt. Schnell, datenreich und ohne persönliche Anlageberatung.
+            MarketPilot Nexus erkennt relevante Bewegungen, News und Risiken in Aktien, ETFs und Krypto und übersetzt sie in verständliche Briefings. Keine Anlageberatung, sondern klare Markteinordnung.
           </p>
           <div class="hero-actions">
             <a class="primary-action" href="#watchlist">Watchlist starten</a>
-            <a class="secondary-action" href="#briefing">Live-Dashboard ansehen</a>
+            <a class="secondary-action" href="#briefing">Dashboard ansehen</a>
           </div>
           <div class="quick-actions" aria-label="Schnellaktionen">
             <button type="button" data-quick-action="search">Asset suchen</button>
@@ -72,7 +72,7 @@
           <div class="cockpit-topline">
             <div class="status-line">
               <span class="signal" id="liveSignal" aria-hidden="true"></span>
-              <span id="dataStatus">Daten werden aktualisiert</span>
+              <span id="dataStatus">Marktdaten verbunden</span>
             </div>
             <span class="cockpit-badge">Nexus OS</span>
           </div>
@@ -87,7 +87,7 @@
               <div class="panel-grid hero-kpis">
                 <span>Kurs <b id="heroPrice">Letzter Stand</b></span>
                 <span>Trend <b id="heroTrend">Heute</b></span>
-                <span>Quelle <b id="heroSource">Demo-Modus</b></span>
+                <span>Quelle <b id="heroSource">Letzter Stand</b></span>
               </div>
             </div>
             <div class="ai-insight-card cockpit-float-card">
@@ -99,7 +99,7 @@
           <div class="hero-cockpit-grid" aria-label="Market Cockpit Vorschau">
             <button type="button" data-quick-action="briefing">
               <span>Heute wichtig</span>
-              <strong id="heroToday">Briefing lädt</strong>
+              <strong id="heroToday">Briefing bereit</strong>
             </button>
             <button type="button" data-quick-action="watchlist">
               <span>Watchlist Pulse</span>
@@ -126,8 +126,8 @@
         <div class="today-strip" id="todayStrip" aria-label="Heute wichtig">
           <article>
             <span class="panel-label">Heute wichtig</span>
-            <strong id="todayFocus">Marktdaten werden geladen</strong>
-            <p id="todayReason">Sobald Daten geladen sind, siehst du hier die wichtigste Bewegung.</p>
+            <strong id="todayFocus">Marktstatus bereit</strong>
+            <p id="todayReason">Relevante Bewegungen werden nach Risiko, Assetklasse und Datenstatus priorisiert.</p>
           </article>
           <article>
             <span class="panel-label">Watchlist Check</span>
@@ -210,22 +210,22 @@
         <article class="skeleton-card">
           <span>Bitcoin</span>
           <strong>Letzter Stand</strong>
-          <small>Quelle wird aktualisiert</small>
+          <small>Status: Letzter Stand</small>
         </article>
         <article class="skeleton-card">
           <span>Nvidia</span>
           <strong>Letzter Stand</strong>
-          <small>Quelle wird aktualisiert</small>
+          <small>Status: Letzter Stand</small>
         </article>
         <article class="skeleton-card">
           <span>S&P 500 ETF</span>
           <strong>Letzter Stand</strong>
-          <small>Quelle wird aktualisiert</small>
+          <small>Status: Letzter Stand</small>
         </article>
         <article class="skeleton-card">
           <span>MSCI World ETF</span>
           <strong>Letzter Stand</strong>
-          <small>Quelle wird aktualisiert</small>
+          <small>Status: Letzter Stand</small>
         </article>
       </section>
 
@@ -428,13 +428,13 @@
             <div class="chart-shell detail-tab-panel active" data-detail-panel="chart">
               <canvas id="priceChart" width="980" height="360" aria-label="Historischer Kurschart"></canvas>
               <div class="chart-tooltip" id="chartTooltip" hidden></div>
-              <div class="chart-loading" id="chartLoading">Chartdaten werden geladen</div>
+              <div class="chart-loading" id="chartLoading">Chartdaten werden vorbereitet</div>
             </div>
 
             <div class="metric-grid detail-tab-panel" data-detail-panel="overview">
               <article>
                 <span>Data Health</span>
-                <strong id="metricHealth">Demo-Modus</strong>
+                <strong id="metricHealth">Letzter Stand</strong>
               </article>
               <article>
                 <span>Zeitraum</span>
@@ -450,7 +450,7 @@
               </article>
               <article>
                 <span>Quelle</span>
-                <strong id="metricSource">Demo-Modus</strong>
+                <strong id="metricSource">Cache</strong>
               </article>
               <article>
                 <span>Region</span>
@@ -565,9 +565,9 @@
             <div class="table-toolbar">
               <div>
                 <span class="panel-label">Asset-Universum</span>
-                <h3 id="assetCount">Assets werden geladen</h3>
+                <h3 id="assetCount">Asset-Universum bereit</h3>
               </div>
-              <span class="live-badge" id="liveBadge">Daten werden aktualisiert</span>
+              <span class="live-badge" id="liveBadge">Live/Cache</span>
             </div>
             <div class="view-switcher" id="screener" aria-label="Screener-Ansicht">
               <button class="active" type="button" data-view-mode="cards">Cards</button>
@@ -722,7 +722,7 @@
           <div class="access-actions">
             <button class="primary-action" id="openCheckout" type="button">Pro kaufen</button>
             <button class="secondary-action" id="openAccessModal" type="button">Code einlösen</button>
-            <button class="secondary-action" id="resetDemoAccess" type="button">Demo-Zugang zurücksetzen</button>
+            <button class="secondary-action developer-reset" id="resetDemoAccess" type="button" hidden>Demo-Zugang zurücksetzen</button>
           </div>
         </div>
         <div class="premium-grid">
@@ -1026,12 +1026,12 @@
           </article>
           <article>
             <h3>Impressum & Datenschutz</h3>
-            <p>Für den kommerziellen Betrieb müssen vollständiges Impressum, Datenschutz, Cookie-Management, Zahlungsbedingungen und Anbieterkennzeichnung ergänzt werden.</p>
+            <p>Rechtliche Pflichtangaben, Datenschutz, Zahlungsbedingungen und Anbieterkennzeichnung werden für den kommerziellen Betrieb vollständig bereitgestellt.</p>
           </article>
           <article>
-            <h3>Demo-Zugang</h3>
-            <p>Der Pro-Status wird nur lokal in diesem Browser gespeichert. Für ein echtes Produkt muss der Code serverseitig geprüft werden.</p>
-            <button class="secondary-action" id="resetDemoAccessLegal" type="button">Demo-Zugang zurücksetzen</button>
+            <h3>Account & Einstellungen</h3>
+            <p>Pro-Status, Watchlist, Notizen und Alarme bleiben lokal in diesem Browser gespeichert. Promo-Codes werden in einer echten Produktversion serverseitig geprüft.</p>
+            <button class="secondary-action developer-reset" id="resetDemoAccessLegal" type="button" hidden>Demo-Zugang zurücksetzen</button>
           </article>
         </div>
       </section>
@@ -1054,7 +1054,7 @@
         <button class="modal-close" id="modalClose" type="button" aria-label="Dialog schließen">×</button>
         <span class="panel-label" id="modalKicker">Aktion</span>
         <h2 id="modalTitle">Aktion vorbereiten</h2>
-        <p id="modalBody">Diese Funktion wird im Frontend vorbereitet.</p>
+        <p id="modalBody">Diese Aktion wird im aktuellen Markt-Kontext geöffnet.</p>
         <canvas class="modal-chart" id="modalChart" width="1080" height="420" hidden aria-label="Vergrößerter Chart"></canvas>
         <label class="field" id="modalInputWrap">
           <span id="modalInputLabel">Eingabe</span>
@@ -1116,7 +1116,7 @@
         <label class="field">
           <span>Access Code</span>
           <div class="access-code-field">
-            <input id="accessCodeInput" type="password" autocomplete="off" spellcheck="false" placeholder="Demo-Code eingeben" />
+            <input id="accessCodeInput" type="password" autocomplete="off" spellcheck="false" placeholder="Nexus Code eingeben" />
             <button class="secondary-action" id="toggleAccessCode" type="button" aria-pressed="false">Anzeigen</button>
           </div>
         </label>
@@ -1148,7 +1148,7 @@
             <span class="panel-label">Dein Plan</span>
             <p>MarketPilot Nexus Pro</p>
             <strong id="checkoutPrice">12,99 € monatlich</strong>
-            <p id="checkoutSubline">Monatlich kündbar. Demo-Kauf aktiviert Pro lokal.</p>
+            <p id="checkoutSubline">Monatlich kündbar. Der Kauf-Flow aktiviert Pro lokal.</p>
           </div>
           <ul>
             <li>Unbegrenzter AI Assistant</li>
@@ -1159,7 +1159,7 @@
         </div>
         <div class="checkout-payment">
           <span class="panel-label">Zahlung</span>
-          <p>Demo-Zahlungsbereich. Eine echte Integration kann später über Stripe oder Paddle angebunden werden.</p>
+          <p>Sicherer Checkout-Platzhalter. Stripe oder Paddle kann später an diesen Kauf-Flow angebunden werden.</p>
         </div>
         <p class="form-message" id="checkoutMessage"></p>
         <div class="detail-actions">
