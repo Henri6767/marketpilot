@@ -319,7 +319,11 @@ const state = {
   planActivatedAt: localStorage.getItem("planActivatedAt") || "",
   checkoutPlan: localStorage.getItem("selectedBillingCycle") || localStorage.getItem("marketpilot-billing-cycle") || localStorage.getItem("marketpilot-checkout-plan") || "monthly",
   checkoutTargetPlan: "pro",
-  checkoutLoading: false
+  checkoutLoading: false,
+  user: null,
+  accountTab: "profile",
+  pricingAudience: "all",
+  featureExplorer: "smartAlerts"
 };
 
 localStorage.setItem("marketpilot-last-visit", new Date().toISOString());
@@ -626,6 +630,491 @@ const BUSINESS_SUITE_MODULES = [
   "Shared Briefings"
 ];
 
+const DEFAULT_NOTIFICATIONS = {
+  dailyBriefing: true,
+  weeklyRecap: true,
+  watchlistAlerts: true,
+  smartAlerts: hasPlan("pro"),
+  newsImpactAlerts: true,
+  billingEmails: true,
+  productUpdates: false
+};
+
+const ACCOUNT_TABS = [
+  ["profile", "Profil"],
+  ["billing", "Plan & Billing"],
+  ["security", "Sicherheit"],
+  ["code", "Nexus Code"],
+  ["notifications", "Benachrichtigungen"],
+  ["data", "Daten & Export"],
+  ["team", "Team"],
+  ["developer", "Developer"]
+];
+
+const PLAN_DETAIL_TABS = {
+  starter: ["Übersicht", "AI", "Watchlist", "Alerts", "Compare", "Limits"],
+  pro: ["Übersicht", "AI Assistant", "Watchlist Pulse", "Smart Alerts", "News Impact", "Deep Analysis", "Reports", "Limits"],
+  elite: ["Übersicht", "Advanced AI", "Scenario Analysis", "Watchlist Groups", "Reports & Export", "Premium Themes", "Limits"],
+  business: ["Übersicht", "Team", "Rollen", "API", "Compliance", "Reports", "Support"],
+  free: ["Übersicht", "AI", "Watchlist", "Limits"]
+};
+
+const PRICING_FEATURES = [
+  ["aiAssistant", "AI Assistant", "pro", "Unbegrenzte AI-Fragen, Watchlist-, News- und Compare-Kontext."],
+  ["watchlistPulse", "Watchlist Pulse", "pro", "Tägliches Briefing, auffällige Werte und Risiko-Fokus."],
+  ["smartAlerts", "Smart Alerts", "pro", "Volatilität, News Impact, Risiko-Level und Trend Breaks."],
+  ["scenarioAnalysis", "Scenario Analysis", "elite", "Szenarien für Tech-, Zins-, Krypto- und Watchlist-Schocks."],
+  ["savedReports", "Saved Reports", "elite", "Reports speichern, wieder öffnen und Export-Preview nutzen."],
+  ["pdfExport", "PDF/CSV Export", "elite", "Export Preview für Analyse- und Report-Workflows."],
+  ["apiAccess", "API Access", "business", "Reports, Team-Watchlists und Datenexporte an Workflows anbinden."],
+  ["teamDashboard", "Team Dashboard", "business", "Rollen, Shared Alerts, Team Reports und Admin Controls."]
+];
+
+function loadUser() {
+  if (localStorage.getItem("userLoggedIn") !== "true") return null;
+  return {
+    name: localStorage.getItem("userName") || "Nexus User",
+    email: localStorage.getItem("userEmail") || "user@marketpilot.local",
+    accountCreatedAt: localStorage.getItem("accountCreatedAt") || new Date().toISOString(),
+    lastLoginAt: localStorage.getItem("lastLoginAt") || new Date().toISOString()
+  };
+}
+
+function saveUser(user) {
+  state.user = user;
+  localStorage.setItem("userLoggedIn", "true");
+  localStorage.setItem("userName", user.name || "Nexus User");
+  localStorage.setItem("userEmail", user.email || "user@marketpilot.local");
+  localStorage.setItem("accountCreatedAt", user.accountCreatedAt || new Date().toISOString());
+  localStorage.setItem("lastLoginAt", user.lastLoginAt || new Date().toISOString());
+  localStorage.setItem("currentPlan", state.currentPlan);
+  localStorage.setItem("selectedBillingCycle", state.checkoutPlan);
+  localStorage.setItem("accessMethod", state.accessMethod || "free");
+  if (state.planActivatedAt) localStorage.setItem("planActivatedAt", state.planActivatedAt);
+  updateAccountUI();
+}
+
+function logoutUser() {
+  localStorage.setItem("userLoggedIn", "false");
+  state.user = null;
+  closeAccountMenu();
+  closeSaasModal("accountModal");
+  updateAccountUI();
+  showToast("Ausgeloggt.");
+}
+
+function accountInitials(user = state.user) {
+  return (user?.name || user?.email || "NX").split(/\s|@/).filter(Boolean).slice(0, 2).map((part) => part[0].toUpperCase()).join("") || "NX";
+}
+
+function emailValid(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+}
+
+function passwordScore(value) {
+  const password = String(value || "");
+  const score = [password.length >= 8, /\d/.test(password), /[A-ZÄÖÜ]/.test(password), /[^A-Za-z0-9]/.test(password)].filter(Boolean).length;
+  return score >= 4 ? ["Stark", "strong"] : score >= 2 ? ["Mittel", "medium"] : ["Schwach", "weak"];
+}
+
+function userNotifications() {
+  try {
+    return { ...DEFAULT_NOTIFICATIONS, ...JSON.parse(localStorage.getItem("marketpilot-notifications") || "{}") };
+  } catch {
+    return { ...DEFAULT_NOTIFICATIONS };
+  }
+}
+
+function saveNotifications(next) {
+  localStorage.setItem("marketpilot-notifications", JSON.stringify(next));
+}
+
+function demoInvoices() {
+  try {
+    return JSON.parse(localStorage.getItem("marketpilot-invoices") || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function invoiceAmountFor(plan = state.currentPlan, cycle = state.checkoutPlan) {
+  const config = PLAN_CONFIG[normalizePlan(plan)];
+  return cycle === "yearly" ? config.yearly : config.monthly;
+}
+
+function seedInvoicesForPlan() {
+  if (state.currentPlan === "free") return [];
+  if (state.currentPlan === "business") {
+    return [{ date: "03.06.2026", plan: "Business individuell", amount: "Individuell", status: "vorbereitet" }];
+  }
+  const plan = currentPlanConfig();
+  const amount = invoiceAmountFor(state.currentPlan, state.checkoutPlan);
+  return [
+    { date: "03.06.2026", plan: `${plan.name} ${state.checkoutPlan === "yearly" ? "jährlich" : "monatlich"}`, amount, status: "bezahlt" },
+    { date: "03.05.2026", plan: `${plan.name} monatlich`, amount: plan.monthly, status: "bezahlt" }
+  ];
+}
+
+function appendDemoInvoice(plan, method) {
+  if (method !== "purchase") return;
+  const invoices = demoInvoices();
+  const config = PLAN_CONFIG[normalizePlan(plan)];
+  invoices.unshift({
+    date: new Date().toLocaleDateString("de-DE"),
+    plan: `${config.name} ${state.checkoutPlan === "yearly" ? "jährlich" : "monatlich"}`,
+    amount: invoiceAmountFor(plan, state.checkoutPlan),
+    status: "bezahlt"
+  });
+  localStorage.setItem("marketpilot-invoices", JSON.stringify(invoices.slice(0, 6)));
+}
+
+function accessLabel() {
+  if (state.currentPlan === "business" && state.accessMethod === "code") return "Business-Zugang aktiv · per Nexus Code";
+  if (state.accessMethod === "purchase") return `${currentPlanConfig().name} aktiv · Demo-Kauf`;
+  if (state.accessMethod === "code") return `${currentPlanConfig().name} aktiv · Nexus Code`;
+  return `${currentPlanConfig().name} aktiv`;
+}
+
+function closeAccountMenu() {
+  document.querySelector("#accountDropdown")?.setAttribute("hidden", "");
+  document.querySelector("#accountButton")?.setAttribute("aria-expanded", "false");
+}
+
+function updateAccountUI() {
+  const topbar = document.querySelector(".topbar-actions");
+  const loginLink = document.querySelector(".login-link");
+  const startLink = document.querySelector(".topbar-action");
+  if (!topbar || !loginLink || !startLink) return;
+  const existing = document.querySelector("#accountMenuWrap");
+  if (!state.user) {
+    loginLink.hidden = false;
+    startLink.hidden = false;
+    if (selectors.accessCodeButton) selectors.accessCodeButton.hidden = true;
+    if (selectors.navProStatus) selectors.navProStatus.hidden = true;
+    loginLink.textContent = "Einloggen";
+    loginLink.href = "#login";
+    startLink.textContent = "Kostenlos starten";
+    startLink.href = "#pricing";
+    existing?.remove();
+    return;
+  }
+  loginLink.hidden = true;
+  startLink.hidden = true;
+  if (selectors.accessCodeButton) selectors.accessCodeButton.hidden = false;
+  if (selectors.navProStatus) selectors.navProStatus.hidden = false;
+  const businessItems = hasPlan("business")
+    ? `<button type="button" data-account-open="team">Team verwalten</button>
+       <button type="button" data-account-open="team">Rollen & Rechte</button>
+       <button type="button" data-account-open="data">Business Reports</button>
+       <button type="button" data-account-open="team">API Access</button>`
+    : "";
+  const html = `
+    <div class="account-menu-wrap" id="accountMenuWrap">
+      <button class="account-button" id="accountButton" type="button" aria-expanded="false">
+        <span class="account-avatar">${escapeHTML(accountInitials())}</span>
+        <span class="account-copy"><b>${escapeHTML(state.user.name)}</b><small>${escapeHTML(currentPlanConfig().name)}</small></span>
+        <span class="account-plan-pill">${escapeHTML(currentPlanConfig().name)}</span>
+      </button>
+      <div class="account-dropdown" id="accountDropdown" hidden>
+        <button type="button" data-account-view="dashboard">Dashboard</button>
+        <button type="button" data-account-open="profile">Mein Konto</button>
+        <button type="button" data-account-open="billing">Plan & Billing</button>
+        <button type="button" data-account-open="security">Sicherheit</button>
+        <button type="button" data-account-open="code">Nexus Code einlösen</button>
+        <button type="button" data-account-open="notifications">Einstellungen</button>
+        ${businessItems}
+        <button type="button" data-account-logout>Ausloggen</button>
+      </div>
+    </div>`;
+  if (existing) existing.outerHTML = html;
+  else topbar.insertAdjacentHTML("beforeend", html);
+}
+
+function closeSaasModal(id) {
+  document.querySelector(`#${id}`)?.remove();
+}
+
+function openSaasModal(id, title, body, options = {}) {
+  closeSaasModal(id);
+  const backdrop = document.createElement("div");
+  backdrop.className = `modal-backdrop saas-backdrop ${options.wide ? "wide" : ""}`;
+  backdrop.id = id;
+  backdrop.innerHTML = `
+    <section class="modal saas-modal ${options.wide ? "wide-modal" : ""}" role="dialog" aria-modal="true" aria-labelledby="${id}Title">
+      <button class="modal-close" type="button" data-saas-close="${id}" aria-label="Dialog schließen">×</button>
+      <span class="panel-label">${escapeHTML(options.kicker || "MarketPilot Nexus")}</span>
+      <h2 id="${id}Title">${escapeHTML(title)}</h2>
+      <div class="saas-modal-body">${body}</div>
+      ${options.footer ? `<p class="saas-modal-footer">${escapeHTML(options.footer)}</p>` : ""}
+    </section>`;
+  document.body.appendChild(backdrop);
+  window.setTimeout(() => backdrop.querySelector("input, button:not(.modal-close)")?.focus(), 30);
+}
+
+function authFormHTML(mode = "login", message = "") {
+  const isLogin = mode === "login";
+  const isRegister = mode === "register";
+  return `
+    <div class="auth-shell" data-auth-mode="${mode}">
+      <div class="saas-tabs">
+        <button type="button" class="${isLogin ? "active" : ""}" data-auth-tab="login">Einloggen</button>
+        <button type="button" class="${isRegister ? "active" : ""}" data-auth-tab="register">Registrieren</button>
+        <button type="button" class="${mode === "forgot" ? "active" : ""}" data-auth-tab="forgot">Passwort vergessen</button>
+      </div>
+      ${message ? `<div class="auth-context-note">${escapeHTML(message)}</div>` : ""}
+      <div class="auth-social-row">
+        <button type="button">Google</button>
+        <button type="button">Apple</button>
+        <button type="button">Microsoft</button>
+      </div>
+      <form class="auth-form" data-auth-form="${mode}" novalidate>
+        ${isRegister ? `<label>Name<input name="name" type="text" autocomplete="name" placeholder="Max Mustermann"></label>` : ""}
+        <label>E-Mail<input name="email" type="email" autocomplete="email" placeholder="name@firma.de"></label>
+        ${mode !== "forgot" ? `
+          <label>Passwort
+            <span class="password-field"><input name="password" type="password" autocomplete="${isLogin ? "current-password" : "new-password"}" placeholder="Passwort"><button type="button" data-toggle-password>👁</button></span>
+          </label>
+          ${isRegister ? `
+            <div class="password-strength"><span>Passwortstärke</span><b data-password-strength>Schwach</b><i></i></div>
+            <label>Passwort bestätigen
+              <span class="password-field"><input name="confirm" type="password" autocomplete="new-password" placeholder="Passwort wiederholen"><button type="button" data-toggle-password>👁</button></span>
+            </label>
+            <label class="check-row"><input name="terms" type="checkbox"> Ich akzeptiere Datenschutz und Nutzungsbedingungen</label>
+          ` : `<label class="check-row"><input name="remember" type="checkbox"> Eingeloggt bleiben</label>`}
+        ` : ""}
+        <p class="form-message" data-auth-message></p>
+        <button class="primary-action" type="submit">${mode === "forgot" ? "Reset-Link senden" : isRegister ? "Kostenlos starten" : "Einloggen"}</button>
+        <button class="link-action" type="button" data-auth-tab="${isRegister ? "login" : "register"}">${isRegister ? "Schon ein Konto? Einloggen" : "Noch kein Konto? Kostenlos starten"}</button>
+      </form>
+      <p class="auth-privacy">Geschützt durch verschlüsselte Sessions, Planrechte und rollenbasierte Zugriffslogik.</p>
+    </div>`;
+}
+
+function openAuthModal(mode = "login", message = "") {
+  openSaasModal("authModal", mode === "register" ? "Konto erstellen" : mode === "forgot" ? "Passwort zurücksetzen" : "Einloggen", authFormHTML(mode, message), { kicker: "Account Access" });
+}
+
+function handleAuthSubmit(form) {
+  const mode = form.dataset.authForm;
+  const msg = form.querySelector("[data-auth-message]");
+  const data = Object.fromEntries(new FormData(form).entries());
+  const fail = (text) => {
+    msg.textContent = text;
+    msg.className = "form-message error";
+  };
+  if (!emailValid(data.email)) return fail("Bitte gib eine gültige E-Mail-Adresse ein.");
+  if (mode === "forgot") {
+    msg.textContent = "Falls ein Konto existiert, wurde ein Reset-Link vorbereitet.";
+    showToast("Reset-Link vorbereitet.");
+    return;
+  }
+  if (!data.password) return fail("Bitte gib ein Passwort ein.");
+  if (mode === "register") {
+    if (!String(data.name || "").trim()) return fail("Bitte gib deinen Namen ein.");
+    if (data.password !== data.confirm) return fail("Die Passwörter stimmen nicht überein.");
+    if (!form.querySelector("[name='terms']").checked) return fail("Bitte akzeptiere Datenschutz und Nutzungsbedingungen.");
+    const user = { name: data.name.trim(), email: data.email.trim(), accountCreatedAt: new Date().toISOString(), lastLoginAt: new Date().toISOString() };
+    saveUser(user);
+    closeSaasModal("authModal");
+    showToast("Konto erstellt. Willkommen bei MarketPilot Nexus.");
+    return;
+  }
+  saveUser({ name: localStorage.getItem("userName") || data.email.split("@")[0], email: data.email.trim(), accountCreatedAt: localStorage.getItem("accountCreatedAt") || new Date().toISOString(), lastLoginAt: new Date().toISOString() });
+  closeSaasModal("authModal");
+  showToast("Willkommen zurück.");
+}
+
+function accountTabsHTML(active = state.accountTab) {
+  return `<div class="saas-tabs account-tabs">${ACCOUNT_TABS.map(([key, label]) => {
+    const locked = key === "team" && !hasPlan("business");
+    return `<button type="button" class="${active === key ? "active" : ""}" data-account-tab="${key}">${escapeHTML(label)}${locked ? " · Business" : ""}</button>`;
+  }).join("")}</div>`;
+}
+
+function usageRowsHTML() {
+  const plan = currentPlanConfig();
+  const aiLimit = getPlanLimit("aiQuestions");
+  const reportLimit = hasPlan("elite") ? "unbegrenzt" : hasPlan("pro") ? "0/5 Preview" : "nicht verfügbar";
+  return `
+    <div class="usage-grid">
+      <span>Watchlist <b>${state.savedSymbols.size}/${planLimitLabel(plan.watchlistLimit)}</b></span>
+      <span>AI-Fragen <b>${aiLimit === Infinity ? "unbegrenzt" : `${state.assistantDaily[todayKey()] || 0}/${aiLimit}`}</b></span>
+      <span>Alerts <b>${Object.keys(state.alerts).length + state.smartAlerts.length}/${planLimitLabel(plan.alertLimit)}</b></span>
+      <span>Compare <b>${state.compareSymbols.size}/${planLimitLabel(plan.compareLimit)}</b></span>
+      <span>Reports <b>${reportLimit}</b></span>
+      <span>Export <b>${hasPlan("elite") ? "verfügbar" : "nicht verfügbar"}</b></span>
+    </div>`;
+}
+
+function invoicesHTML() {
+  const invoices = demoInvoices().length ? demoInvoices() : seedInvoicesForPlan();
+  if (state.currentPlan === "free" && !invoices.length) return `<div class="empty-state">Noch keine Rechnungen.</div>`;
+  return `
+    <div class="billing-table">
+      <div><b>Datum</b><b>Plan</b><b>Betrag</b><b>Status</b><b>Aktion</b></div>
+      ${invoices.map((invoice) => `<div><span>${escapeHTML(invoice.date)}</span><span>${escapeHTML(invoice.plan)}</span><span>${escapeHTML(invoice.amount)}</span><span>${escapeHTML(invoice.status)}</span><button type="button" data-invoice-view>Anzeigen</button></div>`).join("")}
+    </div>`;
+}
+
+function accountPanelHTML(tab = state.accountTab) {
+  const user = state.user || { name: "Gast", email: "nicht angemeldet", lastLoginAt: "" };
+  const plan = currentPlanConfig();
+  if (tab === "profile") {
+    return `<div class="account-panel-grid">
+      <label>Name<input id="accountName" value="${escapeHTML(user.name)}"></label>
+      <label>E-Mail<input id="accountEmail" type="email" value="${escapeHTML(user.email)}"></label>
+      <article><span class="panel-label">Account-Status</span><strong>${state.user ? "Aktiv" : "Gastmodus"}</strong><p>Letzter Login: ${user.lastLoginAt ? formatDateTime(user.lastLoginAt) : "Noch nicht angemeldet"}</p></article>
+      <div class="detail-actions"><button class="primary-action" type="button" data-account-save-profile>Profil speichern</button></div>
+    </div>`;
+  }
+  if (tab === "billing") {
+    return `<div class="billing-dashboard">
+      <article class="billing-hero"><span class="panel-label">Aktueller Plan</span><h3>${escapeHTML(accessLabel())}</h3><p>Billing Cycle: ${state.checkoutPlan === "yearly" ? "Jährlich" : "Monatlich"} · Preis: ${escapeHTML(invoiceAmountFor(state.currentPlan, state.checkoutPlan))} · Aktiviert: ${state.planActivatedAt ? formatDateTime(state.planActivatedAt) : "Noch nicht aktiviert"}</p></article>
+      ${usageRowsHTML()}
+      <div class="payment-card"><span class="panel-label">Zahlungsmethode</span><strong>${state.currentPlan === "free" ? "Keine Zahlungsmethode hinterlegt" : "Visa **** 4242"}</strong><p>${state.currentPlan === "free" ? "Beim Upgrade kannst du eine Zahlungsmethode auswählen." : "Standard-Zahlungsmethode für Planverwaltung."}</p><button class="secondary-action" type="button" data-open-payment-method>Zahlungsmethode ändern</button></div>
+      <div class="invoice-panel"><div class="table-toolbar"><span class="panel-label">Rechnungen</span><button class="secondary-action" type="button" data-invoice-view>Rechnung anzeigen</button></div>${invoicesHTML()}</div>
+      <div class="detail-actions"><button class="primary-action" type="button" data-account-change-plan>Plan ändern</button><button class="secondary-action" type="button" data-account-manage-plan>Plan verwalten</button><button class="secondary-action" type="button" data-account-open-code>Nexus Code einlösen</button></div>
+    </div>`;
+  }
+  if (tab === "security") {
+    return `<div class="security-grid">
+      <article><span class="panel-label">Passwortstärke</span><strong>Mittel</strong><div class="security-meter"><span style="width:62%"></span></div><p>Mindestens 8 Zeichen, Zahl, Sonderzeichen und Großbuchstabe empfohlen.</p></article>
+      <article><span class="panel-label">Aktive Session</span><strong>Dieses Gerät</strong><p>Letzter Login: ${user.lastLoginAt ? formatDateTime(user.lastLoginAt) : "nicht verfügbar"} · 2FA: Nicht aktiviert</p></article>
+      <div class="detail-actions"><button class="secondary-action" type="button" data-security-demo>Passwort ändern</button><button class="secondary-action" type="button" data-security-demo>2FA vorbereiten</button><button class="secondary-action" type="button" data-security-demo>Alle Sessions abmelden</button></div>
+    </div>`;
+  }
+  if (tab === "code") {
+    return `<div class="code-redemption-panel">
+      <p>Ein gültiger Nexus Code kann einen erweiterten Test- oder Business-Zugang freischalten.</p>
+      <label>Nexus Code<span class="password-field"><input id="accountAccessCode" type="password" placeholder="Nexus Code eingeben"><button type="button" data-account-toggle-code>👁</button></span></label>
+      <p class="form-message" id="accountCodeMessage"></p>
+      <button class="primary-action" type="button" data-account-redeem-code>Code einlösen</button>
+    </div>`;
+  }
+  if (tab === "notifications") {
+    const prefs = userNotifications();
+    return `<div class="toggle-grid">${[
+      ["dailyBriefing", "Daily AI Briefing"],
+      ["weeklyRecap", "Weekly Recap"],
+      ["watchlistAlerts", "Watchlist Alerts"],
+      ["smartAlerts", "Smart Alerts"],
+      ["newsImpactAlerts", "News Impact Alerts"],
+      ["billingEmails", "Plan-/Billing E-Mails"],
+      ["productUpdates", "Product Updates"]
+    ].map(([key, label]) => `<label class="toggle-row"><span>${label}</span><input type="checkbox" data-notification-key="${key}" ${prefs[key] ? "checked" : ""}></label>`).join("")}</div>`;
+  }
+  if (tab === "data") {
+    return `<div class="data-export-panel">
+      <article><span class="panel-label">Gespeicherte Reports</span><strong>${state.savedReports.length}</strong><p>Reports, Export Preview und Briefings werden planabhängig bereitgestellt.</p></article>
+      <article><span class="panel-label">Datenschutz</span><p>Impressum · Datenschutz · Risikohinweis · Datenquellen · Methodik</p></article>
+      <div class="detail-actions"><button class="secondary-action" type="button" data-data-demo>Download meiner Daten</button><button class="secondary-action" type="button" data-data-demo>Daten löschen</button></div>
+    </div>`;
+  }
+  if (tab === "team") {
+    return `<div class="team-grid ${hasPlan("business") ? "" : "locked"}">
+      ${["Team-Mitglieder", "Einladungen", "Rollen", "Team-Watchlists", "Shared Reports", "API Access", "Compliance Export", "Admin Controls"].map((item) => `<article><span class="panel-label">${escapeHTML(item)}</span><strong>${hasPlan("business") ? "Aktiv" : "Business erforderlich"}</strong><p>${hasPlan("business") ? "Für Team-Workflows verfügbar." : "Business schaltet diese Team-Funktion frei."}</p></article>`).join("")}
+      <button class="primary-action" type="button" data-plan-key="business">${hasPlan("business") ? "Business Dashboard öffnen" : "Business anfragen"}</button>
+    </div>`;
+  }
+  return `<div class="developer-panel"><span class="panel-label">Developer/Demo</span><p>Diagnosefunktionen sind bewusst klein gehalten.</p><button class="link-action developer-reset" type="button" data-reset-demo-access>Demo-Zugang zurücksetzen</button></div>`;
+}
+
+function renderAccountModal(tab = state.accountTab) {
+  state.accountTab = tab;
+  const body = `${accountTabsHTML(tab)}<div id="accountPanel">${accountPanelHTML(tab)}</div><p class="saas-subtle-note">Account-, Billing- und Security-Flows sind für echte Auth- und Payment-Anbindung strukturiert.</p>`;
+  openSaasModal("accountModal", "Mein Konto", body, { kicker: state.user ? state.user.email : "Account", wide: true });
+}
+
+function openAccountModal(tab = "profile") {
+  if (!state.user) {
+    openAuthModal("register", "Erstelle ein Konto, um Planverwaltung, Rechnungen, Reports und Security-Einstellungen zu nutzen.");
+    return;
+  }
+  renderAccountModal(tab);
+}
+
+function planDetailContent(planKey, tabLabel = "Übersicht") {
+  const key = normalizePlan(planKey);
+  const plan = PLAN_CONFIG[key];
+  const lower = tabLabel.toLowerCase();
+  const limits = `AI ${planLimitLabel(plan.aiLimit)} · Watchlist ${planLimitLabel(plan.watchlistLimit)} · Alerts ${planLimitLabel(plan.alertLimit)} · Compare ${planLimitLabel(plan.compareLimit)} · Reports ${plan.reportLevel} · Export ${plan.exportLevel}`;
+  const benefitMap = {
+    ai: `${plan.name} nutzt ${plan.aiLimit === Infinity ? "unbegrenzte" : plan.aiLimit} AI-Fragen mit ${key === "free" ? "Basis-Kontext" : key === "starter" ? "Basis-Watchlist-Kontext" : key === "pro" ? "Watchlist-, News- und Compare-Kontext" : key === "elite" ? "Szenario-, Chart- und Report-Kontext" : "Team-, API- und Admin-Kontext"}.`,
+    watchlist: `${plan.name} bietet ${planLimitLabel(plan.watchlistLimit)} Watchlist-Plätze. Höhere Pläne ergänzen Pulse, Gruppen, Team-Watchlists und Shared Reports.`,
+    alerts: `${plan.name} unterstützt ${planLimitLabel(plan.alertLimit)} Alerts. Pro startet Smart Alerts, Elite Multi-Condition Alerts, Business Shared Alerts.`,
+    reports: `${plan.name}: ${plan.reportLevel}. Elite ergänzt Saved Reports und Export Preview, Business Team Reports und Compliance Export.`,
+    team: "Business bündelt Team-Mitglieder, Rollen, API Access, Shared Alerts, Team Reports und Compliance Export.",
+    api: "API Access ist für Business vorbereitet und verbindet Reports, Team-Watchlists und Export-Workflows.",
+    compliance: "Compliance Export bereitet Reports, Datenquellen, Team-Aktivität und Audit-Informationen für professionelle Abläufe vor.",
+    limits
+  };
+  const text = lower.includes("ai") ? benefitMap.ai
+    : lower.includes("watchlist") || lower.includes("pulse") || lower.includes("groups") ? benefitMap.watchlist
+      : lower.includes("alert") ? benefitMap.alerts
+        : lower.includes("report") || lower.includes("export") ? benefitMap.reports
+          : lower.includes("team") || lower.includes("rollen") || lower.includes("support") ? benefitMap.team
+            : lower.includes("api") ? benefitMap.api
+              : lower.includes("compliance") ? benefitMap.compliance
+                : lower.includes("limit") ? benefitMap.limits
+                  : `${plan.audience} ${plan.features.slice(0, 3).join(" · ")}.`;
+  return `<div class="plan-detail-content">
+    <article><span class="panel-label">${escapeHTML(tabLabel)}</span><h3>${escapeHTML(plan.name)} Details</h3><p>${escapeHTML(text)}</p></article>
+    <div class="mini-preview-grid">${plan.features.slice(0, 4).map((feature) => `<span>${escapeHTML(feature)}</span>`).join("")}</div>
+    <div class="usage-grid"><span>AI <b>${planLimitLabel(plan.aiLimit)}</b></span><span>Watchlist <b>${planLimitLabel(plan.watchlistLimit)}</b></span><span>Alerts <b>${planLimitLabel(plan.alertLimit)}</b></span><span>Compare <b>${planLimitLabel(plan.compareLimit)}</b></span></div>
+    <div class="detail-actions"><button class="primary-action" type="button" data-plan-key="${key}">${escapeHTML(planButtonLabel(key))}</button><button class="secondary-action" type="button" data-compare-plans>Alle Pläne vergleichen</button></div>
+  </div>`;
+}
+
+function openPlanDetail(planKey, tabLabel = "Übersicht") {
+  const key = normalizePlan(planKey);
+  const tabs = PLAN_DETAIL_TABS[key] || PLAN_DETAIL_TABS.free;
+  openSaasModal("planDetailModal", `${PLAN_CONFIG[key].name} Details`, `
+    <div class="saas-tabs">${tabs.map((tab) => `<button type="button" class="${tab === tabLabel ? "active" : ""}" data-plan-detail-tab="${escapeHTML(tab)}" data-plan-detail-plan="${key}">${escapeHTML(tab)}</button>`).join("")}</div>
+    <div id="planDetailPanel">${planDetailContent(key, tabLabel)}</div>
+  `, { kicker: "Plan Details", wide: true });
+}
+
+function openPlanCompareModal(tab = "AI & Briefings") {
+  const tabs = ["AI & Briefings", "Watchlist & Alerts", "Analyse & Daten", "Reports & Export", "Team & Business", "Limits"];
+  const rows = PLAN_ORDER.map((key) => {
+    const plan = PLAN_CONFIG[key];
+    const value = tab === "Limits" ? `AI ${planLimitLabel(plan.aiLimit)}, Watchlist ${planLimitLabel(plan.watchlistLimit)}, Alerts ${planLimitLabel(plan.alertLimit)}, Compare ${planLimitLabel(plan.compareLimit)}`
+      : tab.includes("AI") ? `${plan.aiLimit === Infinity ? "Unbegrenzt" : `${plan.aiLimit}/Tag`} · ${plan.learningLevel}`
+        : tab.includes("Watchlist") ? `${planLimitLabel(plan.watchlistLimit)} Werte · ${planLimitLabel(plan.alertLimit)} Alerts`
+          : tab.includes("Analyse") ? `${plan.newsImpactLevel} · ${plan.historyLevel}`
+            : tab.includes("Reports") ? `${plan.reportLevel} · ${plan.exportLevel}`
+              : key === "business" ? "Team, Rollen, API, Audit Log" : "Nicht enthalten";
+    return `<div><b>${plan.name}</b><span>${escapeHTML(value)}</span><button type="button" data-plan-detail="${key}">Details</button></div>`;
+  }).join("");
+  openSaasModal("planCompareModal", "Alle Pläne vergleichen", `<div class="saas-tabs">${tabs.map((item) => `<button type="button" class="${item === tab ? "active" : ""}" data-compare-tab="${escapeHTML(item)}">${escapeHTML(item)}</button>`).join("")}</div><div class="compare-modal-grid">${rows}</div>`, { kicker: "Plan Matrix", wide: true });
+}
+
+function openPlanAssistantModal() {
+  openSaasModal("planAssistantModal", "Welcher Plan passt zu dir?", `
+    <form class="plan-assistant-form">
+      <label>Wie viele Assets willst du beobachten?<select name="assets"><option value="3">Bis 3</option><option value="10">Bis 10</option><option value="unlimited">Unbegrenzt</option></select></label>
+      <label>Wie oft willst du AI nutzen?<select name="ai"><option value="test">Nur testen</option><option value="daily">Täglich</option><option value="advanced">Advanced</option></select></label>
+      <label>Brauchst du Reports/Export?<select name="reports"><option value="no">Nein</option><option value="preview">Preview</option><option value="export">Export</option></select></label>
+      <label>Brauchst du Team/API?<select name="team"><option value="no">Nein</option><option value="yes">Ja</option></select></label>
+      <label>Nutzung<select name="usage"><option value="test">Nur testen</option><option value="daily">Täglich nutzen</option><option value="team">Im Team nutzen</option></select></label>
+      <button class="primary-action" type="submit">Plan empfehlen</button>
+    </form>
+    <div class="plan-fit-result" id="planAssistantResult">Beantworte die Fragen, um eine Empfehlung zu erhalten.</div>
+  `, { kicker: "Plan-Assistent", wide: true });
+}
+
+function openPricingFeatureModal(featureKey = "aiAssistant") {
+  const feature = PRICING_FEATURES.find(([key]) => key === featureKey) || PRICING_FEATURES[0];
+  const [, label, required, copy] = feature;
+  const plan = PLAN_CONFIG[required];
+  openSaasModal("pricingFeatureModal", label, `
+    <div class="pricing-feature-window">
+      <article><span class="panel-label">Feature</span><h3>${escapeHTML(label)}</h3><p>${escapeHTML(copy)}</p></article>
+      <article><span class="panel-label">Freischaltung</span><strong>${escapeHTML(plan.name)} erforderlich</strong><p>${escapeHTML(plan.audience)}</p></article>
+      <div class="detail-actions"><button class="primary-action" type="button" data-plan-key="${required}">${required === "business" ? "Kontakt aufnehmen" : `${plan.name} kaufen`}</button><button class="secondary-action" type="button" data-compare-plans>Pläne vergleichen</button></div>
+    </div>
+  `, { kicker: "Feature Fenster" });
+}
 async function validateAccessCode(code) {
   // Later this can become: return fetch("/api/access/validate", { method: "POST", body: JSON.stringify({ code }) });
   const access = ACCESS_CONFIG.codes[code];
@@ -902,7 +1391,10 @@ function activatePlan(plan, method) {
   state.proAccessMethod = method;
   state.planSource = method || state.currentPlan;
   state.planActivatedAt = new Date().toISOString();
+  appendDemoInvoice(state.currentPlan, method);
   saveProState();
+  if (state.user) saveUser(state.user);
+  else updateAccountUI();
   updateProUI();
   renderPricing();
   renderPremiumModules();
@@ -1042,19 +1534,41 @@ function planButtonLabel(plan) {
   return "Plan verwalten";
 }
 
+function renderFeatureExplorerDetail(featureKey = state.featureExplorer) {
+  const feature = PRICING_FEATURES.find(([key]) => key === featureKey) || PRICING_FEATURES[0];
+  const [key, label, required, text] = feature;
+  const plan = PLAN_CONFIG[required];
+  return `
+    <article>
+      <span class="panel-label">${escapeHTML(label)}</span>
+      <h3>${escapeHTML(plan.name)} erforderlich</h3>
+      <p>${escapeHTML(text)}</p>
+      <div class="mini-preview-grid">
+        ${plan.features.slice(0, 3).map((item) => `<span>${escapeHTML(item)}</span>`).join("")}
+      </div>
+      <div class="detail-actions">
+        <button class="primary-action" type="button" data-plan-key="${required}">${required === "business" ? "Kontakt aufnehmen" : `${plan.name} kaufen`}</button>
+        <button class="secondary-action" type="button" data-pricing-feature="${key}">Feature-Fenster öffnen</button>
+      </div>
+    </article>
+  `;
+}
+
 function renderPricing() {
   const section = document.querySelector("#pricing");
   if (!section) return;
   const cycle = state.checkoutPlan === "yearly" ? "yearly" : "monthly";
   const current = currentPlanConfig();
+  const audienceMap = { free: "beginner", starter: "beginner", pro: "active", elite: "power", business: "teams" };
   const plans = PLAN_ORDER.map((key) => {
     const plan = PLAN_CONFIG[key];
     const active = key === state.currentPlan;
     const lower = planRank(key) < planRank(state.currentPlan);
+    const dimmed = state.pricingAudience !== "all" && audienceMap[key] !== state.pricingAudience;
     const price = cycle === "yearly" ? plan.yearly : plan.monthly;
     const period = key === "business" ? (cycle === "yearly" ? "Team-Angebot" : "pro Monat oder individuell") : (cycle === "yearly" ? "pro Jahr" : "pro Monat");
     return `
-      <article class="pricing-plan plan-${plan.accent} ${active ? "active-plan" : ""} ${key === "pro" ? "sweet-spot" : ""} ${key === "elite" ? "elite-plan" : ""} ${key === "business" ? "business-plan" : ""}">
+      <article class="pricing-plan plan-${plan.accent} ${active ? "active-plan" : ""} ${dimmed ? "dimmed-plan" : ""} ${key === "pro" ? "sweet-spot" : ""} ${key === "elite" ? "elite-plan" : ""} ${key === "business" ? "business-plan" : ""}">
         <div class="plan-topline">
           <span class="plan-name">${escapeHTML(plan.name)}</span>
           <span class="plan-badge">${active ? "Aktuell" : escapeHTML(plan.badge)}</span>
@@ -1079,6 +1593,7 @@ function renderPricing() {
           <summary>Alle Features anzeigen</summary>
           <ul>${plan.hiddenFeatures.map((feature) => `<li>${escapeHTML(feature)}</li>`).join("")}</ul>
         </details>
+        <button class="link-action plan-detail-link" type="button" data-plan-detail="${key}">Details ansehen</button>
         <button class="${key === "pro" || key === "elite" ? "primary-action" : "secondary-action"} plan-button" type="button" data-plan-key="${key}" ${active ? "aria-pressed=\"true\"" : ""}>${escapeHTML(planButtonLabel(key))}</button>
         ${lower ? `<small class="plan-note">In deinem aktuellen Plan enthalten.</small>` : ""}
       </article>
@@ -1099,6 +1614,30 @@ function renderPricing() {
       <p class="eyebrow">Preise</p>
       <h2>Wähle dein Markt-Cockpit</h2>
       <p>Free zum Testen, Starter für kleine Watchlists, Pro für tägliche AI-Briefings, Elite für Power-User und Business für Teams.</p>
+    </div>
+    <div class="pricing-command-center">
+      <div class="plan-audience-tabs" role="tablist" aria-label="Plan-Navigation">
+        ${[
+          ["all", "Alle Pläne"],
+          ["beginner", "Für Einsteiger"],
+          ["active", "Für aktive Anleger"],
+          ["power", "Für Power-User"],
+          ["teams", "Für Teams"]
+        ].map(([key, label]) => `<button class="${state.pricingAudience === key ? "active" : ""}" type="button" data-pricing-audience="${key}">${label}</button>`).join("")}
+      </div>
+      <div class="pricing-feature-tiles" aria-label="Preisfunktionen">
+        ${[
+          ["aiAssistant", "AI Assistant"],
+          ["watchlistPulse", "Watchlist"],
+          ["smartAlerts", "Alerts"],
+          ["savedReports", "Reports"],
+          ["teamDashboard", "Team"]
+        ].map(([key, label]) => `<button type="button" data-pricing-feature="${key}"><span>${label.slice(0, 2).toUpperCase()}</span>${label}</button>`).join("")}
+      </div>
+      <div class="detail-actions">
+        <button class="secondary-action" type="button" data-compare-plans>Alle Pläne vergleichen</button>
+        <button class="primary-action" type="button" data-open-plan-assistant>Plan-Assistent öffnen</button>
+      </div>
     </div>
     <div class="pricing-toolbar">
       <div>
@@ -1156,6 +1695,20 @@ function renderPricing() {
         ].map(([need, plan, text]) => `<button type="button" data-plan-fit="${plan.toLowerCase()}"><strong>${need}</strong><span>${plan}</span><p>${text}</p></button>`).join("")}
       </div>
       <div class="plan-fit-result" id="planFitResult">Wähle ein Ziel, um eine Empfehlung zu erhalten.</div>
+    </section>
+    <section class="feature-explorer-panel">
+      <div class="section-heading compact">
+        <p class="eyebrow">Plan Feature Explorer</p>
+        <h2>Welcher Plan schaltet welches Feature frei?</h2>
+      </div>
+      <div class="feature-explorer">
+        <div class="feature-explorer-list">
+          ${PRICING_FEATURES.map(([key, label, required]) => `<button class="${state.featureExplorer === key ? "active" : ""}" type="button" data-feature-explorer="${key}"><span>${escapeHTML(label)}</span><b>${escapeHTML(PLAN_CONFIG[required].name)}</b></button>`).join("")}
+        </div>
+        <div class="feature-explorer-detail" id="featureExplorerDetail">
+          ${renderFeatureExplorerDetail(state.featureExplorer)}
+        </div>
+      </div>
     </section>
     <section class="account-plan-panel">
       <div>
@@ -1237,16 +1790,28 @@ function checkoutPriceCopy() {
 function updateCheckoutUI() {
   const target = PLAN_CONFIG[normalizePlan(state.checkoutTargetPlan)];
   const copy = checkoutPriceCopy();
+  const current = currentPlanConfig();
+  const upgradeDelta = [
+    `Planwechsel: ${current.name} zu ${target.name}`,
+    `AI: ${planLimitLabel(current.aiLimit)} zu ${planLimitLabel(target.aiLimit)}`,
+    `Watchlist: ${planLimitLabel(current.watchlistLimit)} zu ${planLimitLabel(target.watchlistLimit)}`,
+    `Alerts: ${planLimitLabel(current.alertLimit)} zu ${planLimitLabel(target.alertLimit)}`,
+    `Reports: ${target.reportLevel}`,
+    `Export: ${target.exportLevel}`
+  ];
   selectors.checkoutModal.dataset.plan = normalizePlan(state.checkoutTargetPlan);
   document.querySelector("#checkoutModal .security-icon").textContent = target.name.slice(0, 2).toUpperCase();
   document.querySelector("#checkoutModal .security-header .panel-label").textContent = `MarketPilot Nexus ${target.name}`;
   document.querySelector("#checkoutTitle").textContent = `${target.name} starten`;
-  document.querySelector(".checkout-copy").textContent = target.audience;
+  document.querySelector(".checkout-copy").innerHTML = `${escapeHTML(target.audience)}<span class="checkout-account-line">${state.user ? `Checkout für ${escapeHTML(state.user.email)}` : "Konto kann vor oder nach dem Kauf erstellt werden."}</span>`;
   document.querySelector(".checkout-summary .panel-label").textContent = "Dein Plan";
   document.querySelector(".checkout-summary p").textContent = `MarketPilot Nexus ${target.name}`;
   selectors.checkoutPrice.textContent = copy.price;
   selectors.checkoutSubline.textContent = copy.subline;
-  document.querySelector(".checkout-summary ul").innerHTML = target.features.slice(0, 4).map((feature) => `<li>${escapeHTML(feature)}</li>`).join("");
+  document.querySelector(".checkout-summary ul").innerHTML = `
+    ${target.features.slice(0, 4).map((feature) => `<li>${escapeHTML(feature)}</li>`).join("")}
+    <li class="checkout-delta"><b>Was sich nach Upgrade ändert</b>${upgradeDelta.map((item) => `<span>${escapeHTML(item)}</span>`).join("")}</li>
+  `;
   selectors.billingToggle?.querySelectorAll("[data-plan-cycle]").forEach((button) => {
     const active = button.dataset.planCycle === state.checkoutPlan;
     button.classList.toggle("active", active);
@@ -1258,6 +1823,8 @@ function updateCheckoutUI() {
 function openBusinessContactModal() {
   state.modalMode = "business";
   state.modalSymbol = state.activeAsset.symbol;
+  const contactName = state.user?.name || "";
+  const contactEmail = state.user?.email || "";
   selectors.modal.hidden = false;
   selectors.modalChart.hidden = true;
   selectors.modalInput.parentElement.hidden = true;
@@ -1267,8 +1834,8 @@ function openBusinessContactModal() {
   selectors.modalBody.innerHTML = `
     <div class="business-contact-form">
       <p>Für Teams, API, Rollen, Compliance Export, Shared Watchlists und professionelle Reports.</p>
-      <label>Name<input type="text" id="businessName" placeholder="Name"></label>
-      <label>E-Mail<input type="email" id="businessEmail" placeholder="team@firma.de"></label>
+      <label>Name<input type="text" id="businessName" value="${escapeHTML(contactName)}" placeholder="Name"></label>
+      <label>E-Mail<input type="email" id="businessEmail" value="${escapeHTML(contactEmail)}" placeholder="team@firma.de"></label>
       <label>Teamgröße<select id="businessTeamSize"><option>2-5</option><option>6-20</option><option>21-100</option><option>100+</option></select></label>
       <label>Gewünschte Funktionen<input type="text" id="businessFeatures" placeholder="API, Team Reports, Rollen, Compliance"></label>
       <label>Nachricht<textarea id="businessMessage" rows="3" placeholder="Was soll MarketPilot Nexus für dein Team leisten?"></textarea></label>
@@ -2631,17 +3198,17 @@ function openModal(mode, asset, meta = {}) {
   selectors.modalInput.value = mode === "note" ? state.notes[asset.symbol] || "" : mode === "alert" ? state.alerts[asset.symbol] || "" : "";
   selectors.modalInput.parentElement.hidden = mode === "chart" || mode === "pro" || mode === "learning";
   selectors.modalConfirm.hidden = mode === "chart" || mode === "pro" || mode === "learning";
-  selectors.modalKicker.textContent = mode === "note" ? "Watchlist-Notiz" : mode === "chart" ? "Chart Workspace" : mode === "pro" ? "Upgrade Preview" : mode === "learning" ? "Mini-Lexikon" : "Preisalarm";
+  selectors.modalKicker.textContent = mode === "note" ? "Watchlist-Notiz" : mode === "chart" ? "Chart Workspace" : mode === "pro" ? "Upgrade erforderlich" : mode === "learning" ? "Mini-Lexikon" : "Preisalarm";
   selectors.modalTitle.textContent = mode === "note" ? `Notiz zu ${asset.name}` : mode === "chart" ? `${asset.name} im Analysemodus` : mode === "pro" ? `${meta.feature || "Premium-Modul"} freischalten` : mode === "learning" ? meta.term : `Alarm für ${asset.name}`;
   selectors.modalBody.textContent = mode === "note"
-    ? "Speichere eine kurze lokale Notiz. Sie bleibt in diesem Browser verfügbar und unterstützt dein persönliches Briefing."
+    ? "Speichere eine kurze persönliche Notiz für dein Marktbriefing."
     : mode === "chart"
       ? `Großer Analysechart mit aktuellem Zeitraum ${state.activeRange.toUpperCase()}, Charttyp ${state.chartType} und aktiven Indikatoren.`
       : mode === "pro"
         ? `${meta.benefit || "Diese Premium-Funktion erweitert den AI-Kontext um Watchlist, News, Risiko und Vergleichsdaten."} Wähle den passenden Plan oder nutze einen vorhandenen Nexus Code.`
         : mode === "learning"
           ? learningCopy(meta.term)
-          : "Lege einen Preisalarm an. Der Zielwert bleibt lokal in deinem Browser gespeichert.";
+          : "Lege einen Preisalarm an. Der Zielwert bleibt in deiner Watchlist gespeichert.";
   if (mode === "pro") {
     const required = PLAN_CONFIG[normalizePlan(state.checkoutTargetPlan)];
     selectors.modalBody.innerHTML = `
@@ -2650,7 +3217,7 @@ function openModal(mode, asset, meta = {}) {
         <p>${escapeHTML(meta.benefit || required.audience)}</p>
         <ul>
           <li>Benötigter Plan: ${escapeHTML(meta.requiredPlan || required.name)}</li>
-          <li>Demo-Vorschau: ${escapeHTML(featureUpgradeCopy(meta.featureKey || ""))}</li>
+          <li>Mini-Demo: ${escapeHTML(featureUpgradeCopy(meta.featureKey || ""))}</li>
           <li>Kontext aus Asset, Watchlist, News, Risiko und Alerts</li>
         </ul>
         <div class="detail-actions">
@@ -3806,6 +4373,207 @@ document.querySelectorAll(".quick-actions, .hero-cockpit-grid, .onboarding-steps
   });
 });
 
+document.addEventListener("click", async (event) => {
+  const loginCta = event.target.closest(".login-link");
+  if (loginCta && !state.user) {
+    event.preventDefault();
+    openAuthModal("login");
+    return;
+  }
+  const startCta = event.target.closest(".topbar-action");
+  if (startCta && !state.user) {
+    event.preventDefault();
+    openAuthModal("register");
+    return;
+  }
+  const close = event.target.closest("[data-saas-close]");
+  if (close) {
+    closeSaasModal(close.dataset.saasClose);
+    return;
+  }
+  if (event.target.classList.contains("saas-backdrop")) {
+    event.target.remove();
+    return;
+  }
+  const authTab = event.target.closest("[data-auth-tab]");
+  if (authTab && document.querySelector("#authModal")) {
+    openAuthModal(authTab.dataset.authTab);
+    return;
+  }
+  const passwordToggle = event.target.closest("[data-toggle-password], [data-account-toggle-code]");
+  if (passwordToggle) {
+    const input = passwordToggle.parentElement.querySelector("input");
+    if (input) input.type = input.type === "password" ? "text" : "password";
+    return;
+  }
+  const accountButton = event.target.closest("#accountButton");
+  if (accountButton) {
+    const dropdown = document.querySelector("#accountDropdown");
+    const next = dropdown.hasAttribute("hidden");
+    dropdown.toggleAttribute("hidden", !next);
+    accountButton.setAttribute("aria-expanded", String(next));
+    return;
+  }
+  if (!event.target.closest("#accountMenuWrap")) closeAccountMenu();
+  const accountOpen = event.target.closest("[data-account-open]");
+  if (accountOpen) {
+    openAccountModal(accountOpen.dataset.accountOpen);
+    closeAccountMenu();
+    return;
+  }
+  if (event.target.closest("[data-account-view]")) {
+    setActiveView("dashboard");
+    closeAccountMenu();
+    return;
+  }
+  if (event.target.closest("[data-account-logout]")) {
+    logoutUser();
+    return;
+  }
+  const accountTab = event.target.closest("[data-account-tab]");
+  if (accountTab) {
+    renderAccountModal(accountTab.dataset.accountTab);
+    return;
+  }
+  if (event.target.closest("[data-account-save-profile]")) {
+    const name = document.querySelector("#accountName")?.value.trim();
+    const email = document.querySelector("#accountEmail")?.value.trim();
+    if (!name || !emailValid(email)) {
+      showToast("Bitte Name und gültige E-Mail prüfen.");
+      return;
+    }
+    saveUser({ ...state.user, name, email });
+    renderAccountModal("profile");
+    showToast("Profil gespeichert.");
+    return;
+  }
+  if (event.target.closest("[data-account-change-plan]") || event.target.closest("[data-account-manage-plan]")) {
+    closeSaasModal("accountModal");
+    setActiveView("pricing");
+    return;
+  }
+  if (event.target.closest("[data-account-open-code]")) {
+    renderAccountModal("code");
+    return;
+  }
+  if (event.target.closest("[data-open-payment-method]")) {
+    openSaasModal("paymentModal", "Zahlungsmethode aktualisieren", `
+      <div class="payment-update-form">
+        <label>Karteninhaber<input value="${escapeHTML(state.user?.name || "")}" placeholder="Name"></label>
+        <label>Kartennummer<input value="4242 4242 4242 4242" placeholder="Kartennummer"></label>
+        <div class="two-col"><label>Ablauf<input value="12/28"></label><label>CVC<input value="123"></label></div>
+        <button class="primary-action" type="button" data-payment-save>Zahlungsmethode speichern</button>
+      </div>`, { kicker: "Billing" });
+    return;
+  }
+  if (event.target.closest("[data-payment-save]")) {
+    closeSaasModal("paymentModal");
+    showToast("Zahlungsmethode aktualisiert.");
+    return;
+  }
+  if (event.target.closest("[data-invoice-view]")) {
+    openSaasModal("invoiceModal", "Rechnung", `<div class="invoice-preview"><span class="panel-label">Rechnung</span><strong>${escapeHTML(currentPlanConfig().name)} · ${escapeHTML(invoiceAmountFor())}</strong><p>Status: bezahlt · Datum: ${new Date().toLocaleDateString("de-DE")}</p><button class="secondary-action" type="button" data-saas-close="invoiceModal">Schließen</button></div>`, { kicker: "Billing" });
+    return;
+  }
+  const notification = event.target.closest("[data-notification-key]");
+  if (notification) {
+    const prefs = userNotifications();
+    prefs[notification.dataset.notificationKey] = notification.checked;
+    saveNotifications(prefs);
+    showToast("Benachrichtigung gespeichert.");
+    return;
+  }
+  if (event.target.closest("[data-security-demo], [data-data-demo]")) {
+    showToast("Aktion vorbereitet.");
+    return;
+  }
+  const accountRedeem = event.target.closest("[data-account-redeem-code]");
+  if (accountRedeem) {
+    const input = document.querySelector("#accountAccessCode");
+    const message = document.querySelector("#accountCodeMessage");
+    if (hasPlan("business")) {
+      message.textContent = "Du hast bereits Vollzugang.";
+      return;
+    }
+    const access = await validateAccessCode(input.value.trim());
+    if (access.valid) {
+      activatePlan(access.plan || "business", "code");
+      message.textContent = "Business-Zugang aktiviert.";
+      showToast("Business-Zugang aktiviert. Vollzugang freigeschaltet.");
+      renderAccountModal("billing");
+    } else {
+      message.textContent = "Code nicht gültig.";
+    }
+    return;
+  }
+  const detailTab = event.target.closest("[data-plan-detail-tab]");
+  if (detailTab) {
+    openPlanDetail(detailTab.dataset.planDetailPlan, detailTab.dataset.planDetailTab);
+    return;
+  }
+  const compareTab = event.target.closest("[data-compare-tab]");
+  if (compareTab) {
+    openPlanCompareModal(compareTab.dataset.compareTab);
+    return;
+  }
+  if (event.target.closest("[data-compare-plans]")) {
+    openPlanCompareModal();
+    return;
+  }
+  const globalPlanButton = event.target.closest("[data-plan-key]");
+  if (globalPlanButton && !event.target.closest("#pricing")) {
+    const plan = normalizePlan(globalPlanButton.dataset.planKey);
+    if (plan === state.currentPlan) {
+      closeSaasModal("planDetailModal");
+      closeSaasModal("planAssistantModal");
+      closeSaasModal("pricingFeatureModal");
+      if (hasPlan("pro")) setActiveView("pro");
+      else setActiveView("dashboard");
+      showToast(`${PLAN_CONFIG[plan].name} ist dein aktueller Plan.`);
+      return;
+    }
+    if (planRank(plan) < planRank(state.currentPlan)) {
+      showToast(`${PLAN_CONFIG[plan].name} ist in deinem aktuellen Plan enthalten.`);
+      return;
+    }
+    closeSaasModal("planDetailModal");
+    closeSaasModal("planAssistantModal");
+    closeSaasModal("pricingFeatureModal");
+    if (plan === "business") openBusinessContactModal();
+    else startCheckout(plan);
+    return;
+  }
+});
+
+document.addEventListener("input", (event) => {
+  const password = event.target.closest("#authModal [name='password']");
+  if (!password) return;
+  const [label, level] = passwordScore(password.value);
+  const strength = document.querySelector("[data-password-strength]");
+  const bar = document.querySelector(".password-strength i");
+  if (strength) {
+    strength.textContent = label;
+    strength.dataset.level = level;
+  }
+  if (bar) bar.style.width = level === "strong" ? "100%" : level === "medium" ? "62%" : "28%";
+});
+
+document.addEventListener("submit", (event) => {
+  const auth = event.target.closest("[data-auth-form]");
+  if (auth) {
+    event.preventDefault();
+    handleAuthSubmit(auth);
+    return;
+  }
+  const assistant = event.target.closest(".plan-assistant-form");
+  if (assistant) {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(assistant).entries());
+    const recommended = data.team === "yes" || data.usage === "team" ? "business" : data.reports === "export" || data.ai === "advanced" ? "elite" : data.ai === "daily" || data.assets === "unlimited" || data.reports === "preview" ? "pro" : data.assets === "10" ? "starter" : "free";
+    document.querySelector("#planAssistantResult").innerHTML = `<strong>${PLAN_CONFIG[recommended].name} empfohlen</strong><p>${PLAN_CONFIG[recommended].audience}</p><button class="primary-action" type="button" data-plan-key="${recommended}">${planButtonLabel(recommended)}</button>`;
+  }
+});
+
 selectors.dataSourceButton.addEventListener("click", () => {
   selectors.dataDrawer.hidden = false;
 });
@@ -3846,6 +4614,10 @@ window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !selectors.accessModal.hidden) closeAccessModal();
   if (event.key === "Escape" && !selectors.checkoutModal.hidden) closeCheckout();
   if (event.key === "Escape" && !selectors.assistantDrawer.hidden) selectors.assistantDrawer.hidden = true;
+  if (event.key === "Escape") {
+    document.querySelectorAll(".saas-backdrop").forEach((modal) => modal.remove());
+    closeAccountMenu();
+  }
 });
 
 selectors.modalConfirm.addEventListener("click", () => {
@@ -3958,6 +4730,37 @@ document.querySelector("#pricing")?.addEventListener("click", (event) => {
     openAccessModal();
     return;
   }
+  const audience = event.target.closest("[data-pricing-audience]");
+  if (audience) {
+    state.pricingAudience = audience.dataset.pricingAudience;
+    renderPricing();
+    showToast("Plan-Ansicht aktualisiert.");
+    return;
+  }
+  const planDetail = event.target.closest("[data-plan-detail]");
+  if (planDetail) {
+    openPlanDetail(planDetail.dataset.planDetail);
+    return;
+  }
+  if (event.target.closest("[data-compare-plans]")) {
+    openPlanCompareModal();
+    return;
+  }
+  if (event.target.closest("[data-open-plan-assistant]")) {
+    openPlanAssistantModal();
+    return;
+  }
+  const pricingFeature = event.target.closest("[data-pricing-feature]");
+  if (pricingFeature) {
+    openPricingFeatureModal(pricingFeature.dataset.pricingFeature);
+    return;
+  }
+  const featureExplorer = event.target.closest("[data-feature-explorer]");
+  if (featureExplorer) {
+    state.featureExplorer = featureExplorer.dataset.featureExplorer;
+    renderPricing();
+    return;
+  }
   if (event.target.closest("[data-reset-demo-access]")) {
     resetDemoAccess();
     return;
@@ -4045,7 +4848,8 @@ selectors.completeCheckout?.addEventListener("click", () => {
     selectors.completeCheckout.disabled = false;
     state.checkoutLoading = false;
     setActiveView(hasPlan("pro") ? "pro" : "dashboard");
-    showToast(`${target.name} aktiviert`);
+    const successCopy = target.name === "Elite" ? "Elite aktiviert. Advanced AI und Reports sind freigeschaltet." : `${target.name} aktiviert. Dein Plan ist jetzt aktiv.`;
+    showToast(successCopy);
   }, 900);
 });
 
@@ -4401,8 +5205,11 @@ window.addEventListener("resize", () => {
 });
 
 syncPlanFlags();
+state.user = loadUser();
 resetAssistantDailyUsage();
 renderPricing();
+updateAccountUI();
+updateProUI();
 setStatus("Marktdaten verbunden", "live");
 bootInterfaceEffects();
 setupActiveNavigation();
