@@ -4215,6 +4215,113 @@ footer::before {
   white-space: normal;
 }
 
+.assistant-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.assistant-badges span,
+.assistant-message-meta {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 24px;
+  padding: 0 9px;
+  color: #061017;
+  background: linear-gradient(135deg, var(--nexus-cyan, #35f3ff), var(--nexus-blue, #4aa8ff));
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 1000;
+}
+
+#assistantDataBadge {
+  color: #dcecff;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(144, 232, 255, 0.18);
+}
+
+.assistant-message {
+  max-width: 92%;
+  border: 1px solid rgba(144, 232, 255, 0.14);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.22);
+}
+
+.assistant-message.user {
+  margin-left: auto;
+  border-color: rgba(53, 243, 255, 0.24);
+  background: linear-gradient(135deg, rgba(53, 243, 255, 0.14), rgba(138, 99, 255, 0.08));
+}
+
+.assistant-message:not(.user) {
+  background:
+    linear-gradient(135deg, rgba(53, 243, 255, 0.07), rgba(247, 207, 114, 0.045)),
+    rgba(6, 12, 20, 0.78);
+}
+
+.assistant-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.assistant-actions button {
+  min-height: 34px;
+  padding: 0 11px;
+  color: #eaf8ff;
+  background: rgba(255, 255, 255, 0.065);
+  border: 1px solid rgba(144, 232, 255, 0.2);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.assistant-actions button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(53, 243, 255, 0.46);
+  background: rgba(53, 243, 255, 0.12);
+}
+
+.assistant-message p {
+  line-height: 1.62;
+}
+
+.assistant-message p br + br {
+  content: "";
+  display: block;
+  margin-top: 8px;
+}
+
+.assistant-drawer:not([hidden]) {
+  display: grid;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
+}
+
+.assistant-form textarea::placeholder {
+  color: rgba(215, 231, 248, 0.56);
+}
+
+@media (max-width: 760px) {
+  .assistant-drawer {
+    inset: auto 0 0;
+    width: 100%;
+    max-height: min(88vh, 780px);
+    border-radius: 18px 18px 0 0;
+  }
+
+  .assistant-message {
+    max-width: 100%;
+  }
+
+  .assistant-actions button {
+    flex: 1 1 auto;
+  }
+}
+
 .is-free .pro-dashboard {
   position: relative;
 }

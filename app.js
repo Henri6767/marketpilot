@@ -183,6 +183,8 @@ const selectors = {
   assistantSuggestions: document.querySelector("#assistantSuggestions"),
   assistantAccessText: document.querySelector("#assistantAccessText"),
   assistantContextLine: document.querySelector("#assistantContextLine"),
+  assistantPlanBadge: document.querySelector("#assistantPlanBadge"),
+  assistantDataBadge: document.querySelector("#assistantDataBadge"),
   assistantLimit: document.querySelector("#assistantLimit"),
   marketRadar: document.querySelector("#marketRadar"),
   radarTabs: document.querySelector("#radarTabs"),
@@ -913,7 +915,8 @@ function activatePro(method) {
 }
 
 function saveAssistant() {
-  localStorage.setItem("marketpilot-assistant", JSON.stringify(state.assistantMessages.slice(-20)));
+  state.assistantMessages = state.assistantMessages.slice(-20);
+  localStorage.setItem("marketpilot-assistant", JSON.stringify(state.assistantMessages));
   localStorage.setItem("marketpilot-assistant-daily", JSON.stringify(state.assistantDaily));
   localStorage.setItem("aiQuestionsUsedToday", String(state.assistantDaily[todayKey()] || 0));
   localStorage.setItem("lastAiQuestionResetDate", todayKey());
@@ -971,8 +974,11 @@ function updateProUI() {
   if (selectors.resetDemoAccessLegal) selectors.resetDemoAccessLegal.hidden = true;
   selectors.assistantQuota.textContent = remainingAssistantQuestions();
   if (selectors.assistantLimit) {
-    selectors.assistantLimit.textContent = plan.aiLimit === Infinity ? `Plan: ${plan.name} · unbegrenzte Fragen` : `Plan: ${plan.name} · ${remainingAssistantQuestions()}/${plan.aiLimit} Fragen übrig`;
+    selectors.assistantLimit.textContent = plan.aiLimit === Infinity
+      ? `AI-Fragen: unbegrenzt · Plan: ${plan.name}`
+      : `AI-Fragen heute: ${state.assistantDaily[todayKey()] || 0}/${plan.aiLimit} · ${remainingAssistantQuestions()} übrig`;
   }
+  if (selectors.assistantPlanBadge) selectors.assistantPlanBadge.textContent = `Plan: ${plan.name}`;
   if (selectors.assistantContextLine) {
     const quote = state.quoteCache.get(state.activeAsset.symbol);
     const viewLabel = {
@@ -984,13 +990,19 @@ function updateProUI() {
       alerts: `${Object.keys(state.alerts).length + state.smartAlerts.length} Alerts`,
       compare: `Compare · ${state.compareSymbols.size} Werte`,
       pro: "Pro Hub",
-      pricing: "Preise"
+      pricing: "Preise",
+      legal: "Trust"
     }[state.activeView] || "MarketPilot";
-    selectors.assistantContextLine.textContent = `${viewLabel} · ${rangeLabel(state.activeRange)} · Risiko ${state.activeAsset.risk} · ${healthLabel(quote?.health)}`;
+    selectors.assistantContextLine.textContent = `${viewLabel} · ${state.activeAsset.name} · ${rangeLabel(state.activeRange)} · Risiko ${state.activeAsset.risk}`;
+    if (selectors.assistantDataBadge) selectors.assistantDataBadge.textContent = `Daten: ${healthLabel(quote?.health)}`;
   }
-  selectors.assistantAccessText.textContent = state.isProUser
-    ? `${plan.name}: AI nutzt Watchlist-, News-, Compare-, Risiko- und Plan-Kontext.`
-    : `Free: noch ${remainingAssistantQuestions()} AI-Fragen heute. Starter erhöht Limits, Pro schaltet unbegrenzte Analysen frei, Elite ergänzt Reports und Szenarien.`;
+  selectors.assistantAccessText.textContent = {
+    free: `Free: kurze Basisantworten, ${remainingAssistantQuestions()} Fragen heute übrig.`,
+    starter: `Starter: Basis-Watchlist-Kontext, News Impact und ${remainingAssistantQuestions()} Fragen heute übrig.`,
+    pro: "Pro: unbegrenzte AI mit Watchlist-, News-, Compare- und Deep-Analysis-Kontext.",
+    elite: "Elite: Advanced AI mit Szenarien, Reports, Chart-Erklärung und Export-Preview.",
+    business: "Business: Team-Kontext, Rollen, API, Team Reports und Business-Workflows."
+  }[state.currentPlan] || `${plan.name}: Kontextbasierte AI aktiv.`;
   document.querySelectorAll("[data-pro-copy]").forEach((item) => {
     item.textContent = state.isProUser ? "Pro aktiv" : item.dataset.proCopy || "Pro";
   });
@@ -1000,17 +1012,20 @@ function updateProUI() {
 function updateAssistantSuggestions() {
   if (!selectors.assistantSuggestions) return;
   const prompts = {
-    dashboard: ["Was ist heute wichtig?", "Welche Risiken fallen auf?", "Wie starte ich meine Watchlist?"],
-    markets: ["Welche Assets sind auffällig?", "Zeige mir defensive ETFs", "Welche Kryptos bewegen sich stark?"],
-    analysis: ["Warum bewegt sich dieses Asset?", "Welche Risiken sehe ich?", "Welche Kennzahlen sind wichtig?"],
-    watchlist: ["Analysiere meine Watchlist", "Welche Werte brauchen Aufmerksamkeit?", "Welche Alerts fehlen?"],
-    news: ["Welche News sind relevant?", "Welche Assets sind betroffen?", "Was bedeutet der Impact?"],
-    alerts: ["Welche Alarme sollte ich setzen?", "Erkläre Smart Alerts", "Welche Risiken überwachen?"],
-    compare: ["Vergleiche diese Assets", "Welches ist volatiler?", "Was ist defensiver?"],
-    pro: ["Was bringt Pro konkret?", "Generiere mein Tagesbriefing", "Welche Pro-Module nutzen?"],
-    pricing: ["Welcher Plan passt?", "Was ist in Pro enthalten?", "Wie funktioniert der Nexus Code?"]
-  }[state.activeView] || ["Warum bewegt sich dieses Asset?", "Analysiere meine Watchlist", "Welche News sind relevant?"];
-  selectors.assistantSuggestions.innerHTML = prompts.map((prompt) => `<button type="button" data-question="${escapeHTML(prompt)}">${escapeHTML(prompt)}</button>`).join("");
+    dashboard: ["Was ist heute wichtig?", "Erstelle ein Tagesbriefing", "Welche Risiken fallen auf?", "Welche News sind relevant?"],
+    markets: ["Welche Assets sind auffällig?", "Zeige Top Mover", "Welche Werte haben hohes Risiko?", "Erkläre den Screener"],
+    analysis: ["Warum bewegt sich dieses Asset?", "Erkläre den Chart", "Welche Risiken sehe ich?", "Welche Kennzahlen sind wichtig?", "Welche News betreffen dieses Asset?"],
+    watchlist: ["Analysiere meine Watchlist", "Was hat sich seit meinem letzten Besuch verändert?", "Welche Werte brauchen Aufmerksamkeit?", "Welche Alerts sollte ich setzen?"],
+    news: ["Welche News sind wichtig?", "Welche News betreffen meine Watchlist?", "Erkläre den News Impact", "Welche Assets sind indirekt betroffen?"],
+    alerts: ["Welchen Alert sollte ich setzen?", "Erkläre Smart Alerts", "Welche Risiken sollte ich überwachen?", "Erstelle einen Preisalarm"],
+    compare: ["Vergleiche diese Assets", "Welches ist volatiler?", "Welches hat bessere Datenqualität?", "Erkläre die Unterschiede"],
+    pro: ["Was bringt Pro?", "Was bringt Elite?", "Mach mir ein Watchlist Briefing", "Was passiert wenn Tech fällt?"],
+    pricing: ["Welcher Plan passt zu mir?", "Was bringt Pro?", "Was bringt Elite?", "Was bringt Business?", "Warum lohnt sich ein Upgrade?"],
+    legal: ["Erkläre den Datenstatus", "Was heißt keine Anlageberatung?", "Welche Datenquellen nutzt die App?"]
+  }[state.activeView] || ["Warum bewegt sich dieses Asset?", "Analysiere meine Watchlist", "Welche News sind relevant?", "Welcher Plan passt zu mir?"];
+  const businessPrompt = hasPlan("business") ? ["Welche Team-Reports sind vorbereitet?", "Erkläre API-Zugang"] : [];
+  const finalPrompts = [...prompts, ...businessPrompt].slice(0, 7);
+  selectors.assistantSuggestions.innerHTML = finalPrompts.map((prompt) => `<button type="button" data-question="${escapeHTML(prompt)}">${escapeHTML(prompt)}</button>`).join("");
 }
 
 function planButtonLabel(plan) {
@@ -2898,48 +2913,214 @@ function escapeHTML(value) {
   return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
 }
 
-function assistantContext() {
-  const asset = state.activeAsset;
-  const quote = state.quoteCache.get(asset.symbol);
-  const chart = state.chartCache.get(`${asset.symbol}:${state.activeRange}`);
+const ASSISTANT_ASSET_ALIASES = {
+  btc: "BTC",
+  bitcoin: "BTC",
+  eth: "ETH",
+  ethereum: "ETH",
+  nvda: "NVDA",
+  nvidia: "NVDA",
+  aapl: "AAPL",
+  apple: "AAPL",
+  msci: "EUNL.DE",
+  "msci world": "EUNL.DE",
+  "s&p": "VOO",
+  "s&p 500": "VOO",
+  sp500: "VOO",
+  "sp 500": "VOO",
+  nasdaq: "QQQ"
+};
+
+const ASSISTANT_METRIC_COPY = {
+  kgv: "KGV vergleicht Aktienkurs und Gewinn. Es hilft bei der Bewertung, ist aber ohne Wachstum, Marge und Sektorvergleich nicht ausreichend.",
+  ter: "TER sind laufende ETF-Kosten pro Jahr. Wichtig sind zusätzlich Index, Replikation, Tracking-Differenz, Fondsgröße und Streuung.",
+  "market cap": "Market Cap ist der Marktwert eines Unternehmens oder Kryptoassets. Hohe Market Cap bedeutet nicht automatisch geringes Risiko.",
+  volatilitaet: "Volatilität beschreibt Schwankungsbreite. Hohe Volatilität erhöht Chancen auf große Bewegungen in beide Richtungen und damit das Rückschlagrisiko.",
+  drawdown: "Drawdown ist der Rückgang vom Hoch bis zum Tief. Er zeigt, wie stark ein Asset zwischenzeitlich verlieren kann.",
+  dividendenrendite: "Dividendenrendite setzt Dividende ins Verhältnis zum Kurs. Sie ist nur sinnvoll zusammen mit Ausschüttungsquote, Stabilität und Geschäftsmodell.",
+  ath: "ATH bedeutet All Time High, also historisches Hoch. Abstand zum ATH kann Momentum oder Rückschlagsphase einordnen.",
+  volume: "Volume zeigt Handelsaktivität. Hohes Volumen macht Bewegungen belastbarer, ersetzt aber keine Fundamentalanalyse.",
+  liquidity: "Liquidity beschreibt, wie leicht ein Asset gehandelt werden kann. Geringe Liquidität kann Spreads und Volatilität erhöhen.",
+  momentum: "Momentum beschreibt die Richtung und Stärke der jüngsten Bewegung. Es ist ein Signal, keine Prognose.",
+  "confidence score": "Confidence Score bündelt Datenqualität, Kontextbreite, News-Bezug und Konsistenz der Signale.",
+  "data quality": "Data Quality zeigt, ob Live-, Cache-, Demo- oder verzögerte Daten genutzt werden. Niedrige Qualität macht die Einordnung weniger belastbar.",
+  "risk level": "Risk Level kombiniert Asset-Typ, Volatilität, Datenlage und Marktcharakter. Es ist eine Orientierung, keine Garantie.",
+  "news impact": "News Impact beschreibt, wie stark eine Nachricht direkt oder indirekt zu Asset, Sektor oder Watchlist passt.",
+  replikation: "ETF-Replikation zeigt, ob ein ETF den Index physisch oder synthetisch abbildet. Das beeinflusst Transparenz und Gegenparteirisiko.",
+  holdings: "Top Holdings zeigen die größten Positionen im ETF. Hohe Konzentration kann Chancen und Risiken stärker bündeln.",
+  supply: "Crypto Supply beschreibt Umlaufmenge und maximale Menge. Zusammen mit Nachfrage, Liquidität und Tokenomics beeinflusst sie die Einordnung."
+};
+
+function normalizeAssistantInput(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/ß/g, "ss")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[–—]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function safePercent(value) {
+  return Number.isFinite(Number(value)) ? formatPercent(Number(value)) : "kein belastbarer Prozentwert";
+}
+
+function safePrice(value, currency) {
+  return Number.isFinite(Number(value)) ? formatPrice(Number(value), currency) : "kein belastbarer Kurs";
+}
+
+function assistantContextLabel(view = state.activeView) {
+  return {
+    dashboard: "Dashboard",
+    markets: "Märkte",
+    analysis: state.activeAsset?.name || "Analyse",
+    watchlist: "Watchlist",
+    news: "News",
+    alerts: "Alerts",
+    compare: "Compare",
+    pro: "Pro Hub",
+    pricing: "Preise",
+    legal: "Trust"
+  }[view] || "MarketPilot";
+}
+
+function resetAssistantDailyUsage() {
+  const today = todayKey();
+  const lastReset = localStorage.getItem("lastAiQuestionResetDate");
+  if (lastReset !== today) {
+    state.assistantDaily = {};
+    localStorage.setItem("aiQuestionsUsedToday", "0");
+    localStorage.setItem("lastAiQuestionResetDate", today);
+    saveAssistant();
+    return;
+  }
+  const used = Number(localStorage.getItem("aiQuestionsUsedToday"));
+  if (Number.isFinite(used) && !state.assistantDaily[today]) state.assistantDaily[today] = used;
+}
+
+function buildAssistantContext() {
+  resetAssistantDailyUsage();
+  const asset = state.activeAsset || assets[0];
+  const quote = state.quoteCache.get(asset.symbol) || demoChart(asset, state.activeRange);
+  const chart = state.chartCache.get(`${asset.symbol}:${state.activeRange}`) || quote;
+  const chartPerformance = chart?.series?.length ? periodChange(chart.series, getRangeConfig(state.activeRange).days) : quote?.changePct;
   const watchlist = [...state.savedSymbols].map((symbol) => assets.find((item) => item.symbol === symbol)).filter(Boolean);
   const compareList = [...state.compareSymbols].map((symbol) => assets.find((item) => item.symbol === symbol)).filter(Boolean);
   const newsItems = [...document.querySelectorAll(".news-card")].map((card) => ({
-    title: card.querySelector("h3")?.textContent || "News",
+    title: card.querySelector("h3")?.textContent || "Marktnews",
     assets: card.dataset.newsAssets || "",
     relevance: card.dataset.newsRelevance || "medium",
-    type: card.dataset.newsType || "Markt"
+    type: card.dataset.newsType || "Markt",
+    text: card.textContent.replace(/\s+/g, " ").trim()
   }));
+  const plan = currentPlanConfig();
   return {
-    asset,
-    quote,
-    chart,
-    watchlist,
-    compareList,
-    newsItems,
     activeView: state.activeView,
-    alerts: Object.keys(state.alerts).length + state.smartAlerts.length,
+    currentPlan: state.currentPlan,
+    planName: plan.name,
+    selectedAsset: asset,
+    asset,
+    selectedAssetType: asset.type,
     activeTimeframe: rangeLabel(state.activeRange),
-    chartPerformance: chart?.series ? periodChange(chart.series, getRangeConfig(state.activeRange).days) : quote?.changePct,
+    activeRange: state.activeRange,
+    activeChartType: state.chartType,
+    chart,
+    chartPerformance,
+    quote,
+    assetPrice: quote?.price,
+    assetCurrency: quote?.currency || currencyForAsset(asset),
+    riskLevel: asset.risk,
     sentiment: sentimentFromChange(quote?.changePct),
     dataHealth: healthLabel(quote?.health),
-    isProUser: state.isProUser
+    dataSource: quote?.source || "Demo/Cache",
+    watchlist,
+    alerts: { price: state.alerts, smart: state.smartAlerts, total: Object.keys(state.alerts).length + state.smartAlerts.length },
+    compareList,
+    newsItems,
+    savedReports: state.savedReports || [],
+    aiQuestionsUsedToday: state.assistantDaily[todayKey()] || 0,
+    planLimits: {
+      aiQuestions: getPlanLimit("aiQuestions"),
+      watchlist: getPlanLimit("watchlist"),
+      alerts: getPlanLimit("alerts"),
+      compare: getPlanLimit("compare")
+    },
+    billingCycle: state.checkoutPlan,
+    lastVisitedAssets: state.lastViewed.map((symbol) => assets.find((item) => item.symbol === symbol)).filter(Boolean),
+    currentPlanFeatures: getCurrentPlanFeatures(state.currentPlan),
+    lockedFeatures: Object.entries(PLAN_FEATURE_REQUIREMENTS).filter(([, required]) => !hasPlan(required)).map(([feature, required]) => ({ feature, required }))
   };
 }
 
+function assistantContext() {
+  return buildAssistantContext();
+}
+
 function findAssetsInMessage(message) {
-  const lower = message.toLowerCase();
-  return assets.filter((asset) =>
-    lower.includes(asset.symbol.toLowerCase()) ||
-    lower.includes(asset.name.toLowerCase()) ||
-    asset.name.toLowerCase().split(" ").some((part) => part.length > 4 && lower.includes(part))
-  ).slice(0, 4);
+  const normalized = normalizeAssistantInput(message);
+  const tokens = normalized.split(/[^a-z0-9.-]+/).filter(Boolean);
+  const found = new Map();
+  Object.entries(ASSISTANT_ASSET_ALIASES).forEach(([alias, symbol]) => {
+    if (normalized.includes(alias)) {
+      const asset = assets.find((item) => item.symbol === symbol);
+      if (asset) found.set(asset.symbol, asset);
+    }
+  });
+  assets.forEach((asset) => {
+    const symbol = normalizeAssistantInput(asset.symbol);
+    const name = normalizeAssistantInput(asset.name);
+    const nameParts = name.split(" ").filter((part) => part.length > 3);
+    if (tokens.includes(symbol) || normalized.includes(name) || nameParts.some((part) => normalized.includes(part))) {
+      found.set(asset.symbol, asset);
+    }
+  });
+  return [...found.values()].slice(0, 4);
 }
 
 function confidenceScore(context) {
-  if (context.quote?.health === "live") return "Hoch";
-  if (context.quote?.health === "delayed" || context.quote?.health === "cache") return "Mittel";
+  const health = context.quote?.health;
+  if (health === "live") return "Hoch";
+  if (health === "delayed" || health === "cache") return "Mittel";
   return "Niedrig";
+}
+
+function assistantLanguage(message) {
+  const normalized = normalizeAssistantInput(message);
+  return /\b(why|what|how|compare|explain|news|risk|buy|sell|should|report)\b/.test(normalized) ? "en" : "de";
+}
+
+function detectAssistantIntent(message, context = assistantContext()) {
+  const text = normalizeAssistantInput(message);
+  const mentioned = findAssetsInMessage(message);
+  const metricKey = Object.keys(ASSISTANT_METRIC_COPY).find((key) => text.includes(normalizeAssistantInput(key)));
+  const has = (...words) => words.some((word) => text.includes(normalizeAssistantInput(word)));
+  const debug = { text, mentioned: mentioned.map((asset) => asset.symbol), view: context.activeView };
+  let intent = "asset-analysis";
+  let safety = "ok";
+  if (has("insider", "markt manipulieren", "pump", "front run", "garantierte rendite", "sicherer gewinn", "leverage empfehlung", "hebel empfehlung")) {
+    intent = "unsafe";
+    safety = "blocked";
+  } else if (has("soll ich kaufen", "soll ich verkaufen", "kaufen?", "verkaufen?", "buy", "sell", "should i invest", "investieren?")) {
+    intent = "advice";
+    safety = "neutralize";
+  } else if (has("welcher plan", "abo", "preis", "pricing", "upgrade", "starter", "pro", "elite", "business", "nexus code")) intent = "plan";
+  else if (has("team", "api", "rolle", "rollen", "admin", "compliance", "shared", "business workflow")) intent = "business";
+  else if (has("was passiert wenn", "szenario", "scenario", "falls", "wenn tech", "wenn bitcoin", "stress")) intent = "scenario";
+  else if (has("report", "bericht", "export", "pdf", "csv", "speichern")) intent = "report";
+  else if (has("watchlist", "beobachtungsliste", "wl", "briefing", "tagesbriefing")) intent = has("briefing", "tagesbriefing") ? "briefing" : "watchlist";
+  else if (has("news", "nachricht", "impact", "betreffen", "indirekt")) intent = "news";
+  else if (has("alarm", "alert", "preisalarm", "smart alert", "uberwachen", "trigger")) intent = "alert";
+  else if (has("vergleich", "compare", " vs ", "volatiler", "unterschied")) intent = "compare";
+  else if (has("chart", "trend", "zeitraum", "kerze", "ma50", "ma200", "volumen")) intent = "chart";
+  else if (metricKey || has("erklar", "was bedeutet", "kennzahl", "kgv", "ter", "market cap", "volatilitat", "drawdown", "ath", "liquidity", "momentum")) intent = "learning";
+  else if (has("risiko", "risk", "volatil", "drawdown", "gefahr", "ruckschlag")) intent = "risk";
+  else if (has("etf", "replikation", "holdings", "ausschutt")) intent = "etf";
+  else if (has("krypto", "crypto", "bitcoin", "ethereum", "supply", "altcoin")) intent = "crypto";
+  else if (has("aktie", "kgv", "dividende", "earnings", "umsatz")) intent = "stock";
+  else if (has("wie setze", "wie nutze", "bedienung", "screener", "app", "wo finde")) intent = "app-help";
+  else if (!mentioned.length && text.split(" ").length < 3) intent = "unclear";
+  return { intent, safety, mentioned, metricKey, debug, language: assistantLanguage(message) };
 }
 
 function proDeepDive(asset, context) {
@@ -2952,137 +3133,330 @@ function proDeepDive(asset, context) {
   return `Aktien-Fokus: Bewertung, Momentum, Volatilität, Sektorvergleich, Earnings-Kontext, News Impact und ähnliche Aktien prüfen. ${assetSector(asset)} ist der wichtigste Vergleichsrahmen.`;
 }
 
-function formatAssistantSections(sections) {
-  return sections.map(([title, body]) => `${title}: ${body}`).join("\n\n");
+function assistantPlanDepthLine(context, intent) {
+  if (hasPlan("business")) return `Business-Tiefe: Team-Kontext, Shared Watchlists, Rollen, API-/Admin-Hilfe, Reports und Compliance Export werden einbezogen.`;
+  if (hasPlan("elite")) return `Elite-Tiefe: Advanced AI, Scenario Analysis, Watchlist Groups, Saved Reports und Export Preview sind verfügbar.`;
+  if (hasPlan("pro")) return `Pro-Tiefe: Watchlist-, News-, Compare-, Alert- und Deep-Asset-Kontext werden genutzt.`;
+  if (state.currentPlan === "starter") return `Starter-Tiefe: Basis-Watchlist, 10 AI-Fragen, 2-Asset Compare, Basis-News Impact und einfache Kennzahlen sind aktiv.`;
+  return `Free-Tiefe: kurze Basisantwort. Starter erweitert Limits, Pro schaltet unbegrenzte AI und tiefere Watchlist-Analyse frei.`;
+}
+
+function assistantConfidenceLine(context, usedContexts = []) {
+  const status = context.dataHealth || "Demo";
+  const dataNote = /cache|demo|fallback|verzogert|verzögert/i.test(status)
+    ? `Datenstatus: ${status}. Die Einordnung ist deshalb nur eingeschränkt belastbar.`
+    : `Datenstatus: ${status}.`;
+  const used = usedContexts.length ? usedContexts.join(", ") : "Asset, Chart, Plan";
+  return `Datenqualität: ${confidenceScore(context)}. Verwendeter Kontext: ${used}. ${dataNote} Hinweis: Keine Anlageberatung.`;
+}
+
+function formatAssistantSections(sections, context = assistantContext(), usedContexts = []) {
+  const cleaned = sections
+    .filter((section) => section && section[1])
+    .map(([title, body]) => [title, String(body).replace(/\b(undefined|NaN|null)\b/g, "nicht verfügbar")]);
+  const confidence = ["AI Confidence", assistantConfidenceLine(context, usedContexts)];
+  const limited = state.currentPlan === "free"
+    ? cleaned.slice(0, 3)
+    : state.currentPlan === "starter"
+      ? cleaned.slice(0, 5)
+      : cleaned;
+  return [...limited, confidence].map(([title, body]) => `${title}: ${body}`).join("\n\n");
+}
+
+function topNewsForContext(context, asset = context.asset) {
+  return context.newsItems
+    .filter((item) => item.assets.includes(asset.symbol) || item.assets.split(",").some((symbol) => state.savedSymbols.has(symbol.trim())) || item.type.includes(asset.type))
+    .sort((a, b) => (b.relevance === "high") - (a.relevance === "high"))
+    .slice(0, 3);
+}
+
+function currentUsagePlanRecommendation(context) {
+  if (hasPlan("business")) return "Du hast bereits Business-Zugang. Sinnvoll ist jetzt, Team-Reports, Shared Watchlists, Rollen und API-/Compliance-Workflows zu nutzen.";
+  if (context.watchlist.length >= getPlanLimit("watchlist") && state.currentPlan === "free") return "Deine Watchlist stößt an Free-Grenzen. Starter passt für kleine Watchlists, Pro für unbegrenzte Watchlist und Smart Alerts.";
+  if (context.aiQuestionsUsedToday >= 2 && state.currentPlan === "free") return "Du nutzt AI bereits aktiv. Starter gibt 10 Fragen pro Tag, Pro macht Nexus AI unbegrenzt.";
+  if (context.lockedFeatures.some((item) => ["savedReports", "pdfExport", "scenarioAnalysis"].includes(item.feature))) return "Für Reports, Exporte und Szenarien ist Elite der passende nächste Schritt.";
+  if (context.watchlist.length > 6 || context.compareList.length > 1) return "Pro wirkt passend: unbegrenzte Watchlist, Smart Alerts, Deep Asset Analysis und Watchlist Pulse.";
+  return "Free reicht zum Testen. Starter lohnt sich, sobald du eine kleine Watchlist täglich prüfen willst.";
+}
+
+function planExplanation(planKey) {
+  const key = normalizePlan(planKey);
+  if (key === "pro") return "Pro ist der Sweet Spot für tägliche Watchlist-Nutzung: unbegrenzte AI, Watchlist Pulse, Smart Alerts, News Impact für deine Watchlist, Deep Asset Analysis, Compare Battle, Confidence Score und Report Preview.";
+  if (key === "elite") return "Elite ist für Power-User: Advanced AI, Scenario Analysis, Watchlist Groups, Health Score, Advanced Smart Alerts, Saved Reports, Export Preview, Premium Themes und Explain This Chart Pro.";
+  if (key === "business") return "Business ist für Teams: Team Dashboard, Rollen, Team-Watchlists, API-Zugang, Compliance Export, Shared Reports, Admin Controls und professionelle Workflows.";
+  if (key === "starter") return "Starter ist der günstige Einstieg für kleine Watchlists: 10 Werte, 10 AI-Fragen, Basis-News Impact, 5 Preisalarme, 2-Asset Compare und Learning Basic.";
+  return "Free zeigt den Grundwert: Basis-Dashboard, 3 AI-Fragen, 3 Watchlist-Werte, Basis-News und ein Preisalarm.";
 }
 
 function generateAssistantResponse(message, context = assistantContext()) {
-  const lower = message.toLowerCase();
-  const mentioned = findAssetsInMessage(message);
-  const active = mentioned[0] || context.asset;
-  const quote = state.quoteCache.get(active.symbol) || context.quote;
-  const movement = formatPercent(quote?.changePct);
-  const relevantNews = context.newsItems.filter((item) => item.assets.includes(active.symbol) || item.type.includes(active.type)).slice(0, 2);
-  const plan = currentPlanConfig();
-  const proLine = hasPlan("business")
-    ? `Business-Kontext aktiv: Team-Reports, Shared Watchlists, Admin/API-Workflows, Watchlist (${context.watchlist.length}) und Alerts (${Object.keys(state.alerts).length + state.smartAlerts.length}) werden einbezogen.`
-    : hasPlan("elite")
-      ? `Elite-Kontext aktiv: Advanced AI, Szenarioanalyse, Reports, Export-Preview, Watchlist-Gruppen und News Impact werden einbezogen.`
-      : hasPlan("pro")
-        ? `Pro-Kontext aktiv: Watchlist (${context.watchlist.length}), Compare (${context.compareList.length}), Alerts (${Object.keys(state.alerts).length + state.smartAlerts.length}), News Impact und Datenqualität werden einbezogen.`
-        : state.currentPlan === "starter"
-          ? "Starter-Kontext: Basis-Watchlist, 10 AI-Fragen, Basis-News Impact und einfache Erklärungen sind aktiv."
-          : "Free-Kontext: kurze Basisantwort. Starter erhöht Limits, Pro ergänzt Watchlist Pulse, Smart Alerts, Deep Dive, Compare und Reports.";
-  const planDepth = hasPlan("business")
-    ? ["Team-/Report-Hinweis", "Für Business eignet sich daraus ein Team-Briefing mit Verantwortlichkeiten, Export und API-/Admin-Folgeworkflow."]
-    : hasPlan("elite")
-      ? ["Szenario", "Elite kann daraus eine Szenarioanalyse, Report-Zusammenfassung und Export-Preview vorbereiten."]
-      : hasPlan("pro")
-        ? ["Nächste Pro-Aktion", "Prüfe Watchlist Pulse, News Impact, offene Alerts und Deep Asset Analysis."]
-        : state.currentPlan === "starter"
-          ? ["Nächster Starter-Schritt", "Nutze Basis-Watchlist-Briefing und Preisalarme für die wichtigsten 10 Werte."]
-          : ["Upgrade-Kontext", "Für mehr Watchlist-Kontext, Smart Alerts und Deep Dives ist Pro der passende Sweet Spot."];
+  const analysis = detectAssistantIntent(message, context);
+  const active = analysis.mentioned[0] || context.asset;
+  const quote = state.quoteCache.get(active.symbol) || (active.symbol === context.asset.symbol ? context.quote : demoChart(active, state.activeRange));
+  const movement = safePercent(quote?.changePct);
+  const price = safePrice(quote?.price, quote?.currency || currencyForAsset(active));
+  const news = topNewsForContext(context, active);
+  const usedBase = ["Asset", "Chart", "Plan"];
 
-  if (lower.includes("watchlist")) {
+  if (analysis.safety === "blocked") {
+    return formatAssistantSections([
+      ["Kurzfazit", "Dabei kann ich nicht helfen, weil die Frage in Richtung garantierte Gewinne, Marktmanipulation, Insiderhandel oder riskante Hebel-/Derivate-Anleitung geht."],
+      ["Was ich stattdessen tun kann", "Ich kann neutral Datenqualität, Risiko, News Impact, Kennzahlen und App-Funktionen erklären."],
+      ["Nächste sinnvolle Aktion", "Frag nach einer neutralen Asset-Analyse, einem Vergleich, News Impact oder Alert-Setup."]
+    ], context, ["Safety", "Plan"]);
+  }
+
+  if (analysis.safety === "neutralize") {
+    return formatAssistantSections([
+      ["Kurzfazit", "Ich kann keine persönliche Kauf- oder Verkaufsempfehlung geben. Ich kann dir aber neutral einordnen, welche Daten, Risiken, News und Kennzahlen du beobachten kannst."],
+      ["Datenlage", `${active.name}: Kurs ${price}, Bewegung ${movement}, Risiko ${active.risk}, Datenquelle ${quote?.source || context.dataSource}.`],
+      ["Beobachtungspunkte", `${active.type === "Krypto" ? "Volatilität, Volume, Liquidität, ATH-Distanz und News Impact" : active.type === "ETF" ? "TER, Index, Streuung, Top Holdings, Tracking und Zinsen" : "Bewertung, Sektor, Earnings, Umsatztrend, News und Marktumfeld"} prüfen.`],
+      ["Nächste Aktion", "Nutze Analyse, News Impact und einen Alert, statt eine isolierte Entscheidung aus einer einzelnen Kennzahl abzuleiten."]
+    ], context, ["Asset", "Risiko", "News", "Plan"]);
+  }
+
+  if (analysis.intent === "plan") {
+    const planMention = ["business", "elite", "pro", "starter", "free"].find((key) => normalizeAssistantInput(message).includes(key));
+    return formatAssistantSections([
+      ["Kurzfazit", planMention ? planExplanation(planMention) : currentUsagePlanRecommendation(context)],
+      ["Dein aktueller Stand", `Aktueller Plan: ${context.planName}. AI-Nutzung heute: ${context.planLimits.aiQuestions === Infinity ? "unbegrenzt" : `${context.aiQuestionsUsedToday}/${context.planLimits.aiQuestions}`}. Watchlist: ${context.watchlist.length}/${planLimitLabel(context.planLimits.watchlist)}.`],
+      ["Value Ladder", "Free testet den Wert, Starter macht kleine Watchlists nützlich, Pro macht AI täglich stark, Elite ergänzt Reports/Szenarien, Business macht daraus Team-Workflows."],
+      ["Nächste Aktion", hasPlan("business") ? "Business Dashboard, Team Reports und API-/Admin-Hilfe öffnen." : "Pläne vergleichen oder passenden Checkout öffnen."]
+    ], context, ["Plan", "Nutzung", "Limits"]);
+  }
+
+  if (analysis.intent === "business") {
+    return formatAssistantSections([
+      ["Kurzfazit", hasPlan("business") ? "Business-Kontext ist aktiv. Nexus AI kann Team-Watchlists, Rollen, API, Compliance Export, Team Reports und Shared Alerts erklären." : "Business ist für Teams, API, Rollen, Shared Watchlists, Compliance Export und professionelle Reports."],
+      ["Team-Workflow", "Typischer Ablauf: Team-Watchlist prüfen, auffällige Alerts priorisieren, Report vorbereiten, Export/API-Workflow wählen und Rollen klären."],
+      ["Zugriff", hasPlan("business") ? "Du hast Business-Zugang. Ich kann im Report-Stil antworten und Team-/Admin-Kontext einbeziehen." : "Für volle Team- und API-Funktionen ist Business erforderlich."],
+      ["Nächste Aktion", hasPlan("business") ? "Business Dashboard öffnen oder nach API, Rollen oder Compliance Export fragen." : "Business anfragen oder Nexus Code einlösen."]
+    ], context, ["Business", "Team", "Plan"]);
+  }
+
+  if (analysis.intent === "scenario") {
+    const preview = `${active.name} und ähnliche ${assetSector(active)}-Werte könnten stärker schwanken. Sinnvoll wären Volatilitäts-, News-Impact- und Risk-Level-Alerts.`;
+    return formatAssistantSections([
+      ["Kurzfazit", hasPlan("elite") ? `Scenario Analysis: ${preview}` : "Scenario Analysis ist eine Elite-/Business-Funktion. Ich gebe dir eine neutrale Preview ohne Prognose."],
+      ["Mögliche Auswirkung", `Betroffen wären vor allem Watchlist-Werte aus ${assetSector(active)}, hohe Risiko-Level und Assets mit negativer Chartbewegung.`],
+      ["Alerts", "Sinnvoll zu prüfen: 24h Movement, Volatility Spike, News Impact High und Risk Level Change."],
+      ["Plan-Hinweis", hasPlan("elite") ? "Elite/Business kann daraus einen Szenario-Report vorbereiten." : "Pro sieht eine Preview; Elite schaltet volle Szenarioanalyse und Report Builder frei."]
+    ], context, ["Scenario", "Watchlist", "Alerts", "Plan"]);
+  }
+
+  if (analysis.intent === "report") {
+    return formatAssistantSections([
+      ["Kurzfazit", hasPlan("business") ? "Business kann daraus einen Team Report mit Compliance Export vorbereiten." : hasPlan("elite") ? "Elite kann Saved Reports und PDF/CSV Export Preview nutzen." : hasPlan("pro") ? "Pro kann eine Report Preview vorbereiten." : "Reports sind in Free/Starter eingeschränkt. Pro startet mit Report Preview, Elite ergänzt Speichern und Export."],
+      ["Report-Inhalt", `Fokus: ${active.name}, Zeitraum ${context.activeTimeframe}, Bewegung ${movement}, Risiko ${active.risk}, Watchlist-Werte ${context.watchlist.length}, News-Signale ${news.length}.`],
+      ["Nächste Aktion", hasPlan("pro") ? "Report Preview öffnen und bei Elite/Business Export vorbereiten." : "Upgrade ansehen, wenn du Reports regelmäßig nutzen willst."]
+    ], context, ["Report", "Asset", "Watchlist", "News"]);
+  }
+
+  if (analysis.intent === "watchlist" || analysis.intent === "briefing") {
     if (!context.watchlist.length) {
       return formatAssistantSections([
-        ["Kurzfazit", "Deine Watchlist ist noch leer. Füge zuerst 3 bis 5 Werte hinzu, damit ich Bewegungen, Risiko und News sinnvoll priorisieren kann."],
-        ["Nächster Schritt", "Öffne die Market-Matrix und speichere Werte über „Zur Watchlist“."],
-        ["Hinweis", "Keine Anlageberatung."]
-      ]);
+        ["Kurzfazit", "Deine Watchlist ist noch leer. Füge zuerst 3 Werte hinzu, zum Beispiel Bitcoin, Nvidia und MSCI World ETF."],
+        ["Was danach möglich ist", "Dann kann ich Gewinner, Verlierer, Risiko-Level, News Impact und passende Alerts für dich priorisieren."],
+        ["Nächste Aktion", "Öffne Märkte, füge Werte hinzu und frage danach erneut nach deinem Watchlist Briefing."]
+      ], context, ["Watchlist", "Plan"]);
     }
-    const quoted = context.watchlist.map((asset) => state.quoteCache.get(asset.symbol) || { asset, changePct: null }).sort((a, b) => Math.abs(b.changePct || 0) - Math.abs(a.changePct || 0));
+    const quoted = context.watchlist.map((asset) => state.quoteCache.get(asset.symbol) || demoChart(asset, state.activeRange)).sort((a, b) => Math.abs(b.changePct || 0) - Math.abs(a.changePct || 0));
     return formatAssistantSections([
-      ["Kurzfazit", `${quoted[0].asset.name} ist aktuell am auffälligsten (${formatPercent(quoted[0].changePct)}). ${quoted.at(-1).asset.name} wirkt im Vergleich ruhiger oder schwächer.`],
-      ["Was die Daten zeigen", quoted.slice(0, context.isProUser ? 6 : 3).map((item) => `${item.asset.symbol}: ${formatPercent(item.changePct)} · Risiko ${item.asset.risk}`).join(" · ")],
-      ["Worauf achten", context.isProUser ? "Prüfe offene Alerts, News Impact und Werte mit hoher Bewegung zuerst." : "Free zeigt nur die Kurzsicht. Pro priorisiert News, Alerts und Risiko automatisch."],
-      ["Hinweis", "Keine Anlageberatung."]
-    ]);
+      ["Kurzfazit", `${context.watchlist.length} Watchlist-Werte aktiv. Auffälligster Wert: ${quoted[0].asset.name} (${safePercent(quoted[0].changePct)}). Höchstes Risiko: ${context.watchlist.slice().sort((a, b) => riskMultiplier(b.risk) - riskMultiplier(a.risk))[0]?.name || "nicht verfügbar"}.`],
+      ["Was die Daten zeigen", quoted.slice(0, hasPlan("pro") ? 6 : 3).map((item) => `${item.asset.symbol}: ${safePercent(item.changePct)} · Risiko ${item.asset.risk}`).join(" · ")],
+      ["News Impact", news.length ? news.map((item) => `${item.title} (${item.assets})`).join(" · ") : "Keine direkten Watchlist-News im aktuellen Snapshot."],
+      ["Vorschlag", "Prüfe Werte mit hoher Bewegung zuerst, setze Alerts für Risikoänderungen und nutze das Watchlist Briefing."],
+      ["Plan-Tiefe", assistantPlanDepthLine(context, analysis.intent)]
+    ], context, ["Watchlist", "News", "Alerts", "Plan"]);
   }
 
-  if (lower.includes("vergleich") || lower.includes("compare") || lower.includes(" vs ") || mentioned.length >= 2) {
-    const pair = (mentioned.length >= 2 ? mentioned : context.compareList.length >= 2 ? context.compareList : [active, assets.find((asset) => asset.symbol === "NVDA")]).filter(Boolean).slice(0, 4);
+  if (analysis.intent === "compare") {
+    const pair = (analysis.mentioned.length >= 2 ? analysis.mentioned : context.compareList.length >= 2 ? context.compareList : [active, assets.find((asset) => asset.symbol === "NVDA")]).filter(Boolean).slice(0, hasPlan("pro") ? 4 : 2);
     return formatAssistantSections([
-      ["Kurzfazit", `${pair.map((asset) => asset.name).join(" vs ")} unterscheiden sich vor allem nach Risiko, Asset-Typ, Momentum und Datenqualität.`],
+      ["Kurzfazit", `${pair.map((asset) => asset.name).join(" vs ")} unterscheiden sich vor allem nach Asset-Typ, Sektor, Risiko, Momentum und Datenqualität.`],
       ["Vergleich", pair.map((asset) => {
-        const itemQuote = state.quoteCache.get(asset.symbol);
-        return `${asset.symbol}: ${asset.type}, ${assetSector(asset)}, Risiko ${asset.risk}, Bewegung ${formatPercent(itemQuote?.changePct)}, AI ${sentimentFromChange(itemQuote?.changePct)}`;
+        const itemQuote = state.quoteCache.get(asset.symbol) || demoChart(asset, state.activeRange);
+        return `${asset.symbol}: ${asset.type}, ${assetSector(asset)}, Risiko ${asset.risk}, Bewegung ${safePercent(itemQuote.changePct)}, Daten ${healthLabel(itemQuote.health)}`;
       }).join(" · ")],
-      ["Pro-Einordnung", context.isProUser ? "Pro bewertet zusätzlich defensive Wirkung, Volatilität, Watchlist-Rolle und News Impact." : "Pro schaltet Compare Battle mit Score-Cards und AI-Zusammenfassung frei."],
-      ["Hinweis", "Kein Gewinner-Ranking und keine Kauf-/Verkaufsempfehlung."]
-    ]);
+      ["Worauf achten", `${pair.some((asset) => asset.symbol === "NVDA") ? "Nvidia reagiert oft stärker auf AI-/Chip-News; Apple eher auf Konsum, Services und Regulierung." : "Achte auf Volatilität, Sektorbezug, News Impact und ob mehrere Zeiträume dieselbe Richtung zeigen."}`],
+      ["Plan-Hinweis", hasPlan("elite") ? "Elite ergänzt Advanced Compare mit Szenario- und Report-Kontext." : hasPlan("pro") ? "Pro nutzt Compare Battle bis 4 Assets." : "Starter erlaubt einfache 2-Asset-Vergleiche, Pro erweitert auf 4 Assets."]
+    ], context, ["Compare", "Asset", "News", "Plan"]);
   }
 
-  if (["risiko", "volatil", "drawdown", "gefahr"].some((word) => lower.includes(word))) {
+  if (analysis.intent === "chart") {
+    const series = (quote?.series || context.chart?.series || []).filter((point) => Number.isFinite(point.value));
+    const values = series.map((point) => point.value);
+    const high = values.length ? Math.max(...values) : null;
+    const low = values.length ? Math.min(...values) : null;
     return formatAssistantSections([
-      ["Kurzfazit", `${active.name} hat Risiko-Level ${active.risk}. Die aktuelle Bewegung beträgt ${movement}.`],
-      ["Mögliche Risikotreiber", active.type === "Krypto" ? "Liquidität, Sentimentwechsel, starke Intraday-Bewegungen und regulatorische Nachrichten." : active.type === "ETF" ? "Indexkonzentration, Zinsen, Währung, Sektorlastigkeit und Tracking-Differenz." : "Bewertung, Earnings, Sektorrotation, News und Gesamtmarkt."],
-      ["Datenqualität", `${confidenceScore(context)} · Quelle ${healthLabel(quote?.health)} · Zeitraum ${context.activeTimeframe}.`],
-      ["Hinweis", "Keine Anlageberatung."]
-    ]);
+      ["Kurzfazit", `${active.name} zeigt im Zeitraum ${context.activeTimeframe} eine Bewegung von ${safePercent(context.chartPerformance)}. Trend-Sentiment: ${sentimentFromChange(context.chartPerformance)}.`],
+      ["Was der Chart zeigt", `Aktueller Kurs ${price}. Hoch/Tief im geladenen Chart: ${high ? safePrice(high, quote?.currency) : "nicht verfügbar"} / ${low ? safePrice(low, quote?.currency) : "nicht verfügbar"}. Charttyp: ${context.activeChartType}.`],
+      ["Worauf achten", "Vergleiche mehrere Zeiträume, prüfe Volatilität, mögliche Trendbrüche, Volumen und ob News dieselbe Bewegung erklären."],
+      ["Plan-Hinweis", hasPlan("elite") ? "Elite kann Explain This Chart Pro und Szenario-Kontext nutzen." : "Pro erklärt Chart, News Impact und Risiko strukturierter; Elite ergänzt Szenarien."]
+    ], context, ["Chart", "Asset", "Datenstatus", "Plan"]);
   }
 
-  if (["news", "nachricht", "impact", "ereignis"].some((word) => lower.includes(word))) {
+  if (analysis.intent === "news") {
+    const ordered = (context.watchlist.length ? context.newsItems.filter((item) => item.assets.split(",").some((symbol) => state.savedSymbols.has(symbol.trim()))) : context.newsItems).slice(0, 3);
     return formatAssistantSections([
-      ["Kurzfazit", relevantNews.length ? `${relevantNews[0].title} ist für ${active.name} möglicherweise relevant.` : `Für ${active.name} gibt es aktuell keinen direkten News-Treffer; indirekte Marktimpulse bleiben möglich.`],
-      ["News Impact", relevantNews.length ? relevantNews.map((item) => `${item.relevance === "high" ? "Hoher" : "Mittlerer"} Impact · ${item.assets}`).join(" · ") : "Pro würde Watchlist- und Sektorbezug genauer prüfen."],
-      ["Worauf achten", "Reaktion im Kurs, Volumen, ähnliche Assets und ob die Nachricht nur kurzfristiges Sentiment oder fundamentalen Kontext betrifft."],
-      ["Hinweis", "Keine Anlageberatung."]
-    ]);
+      ["Top News", ordered.length ? ordered.map((item) => `${item.title} · Assets: ${item.assets || "breiter Markt"}`).join(" | ") : "Im aktuellen Snapshot sind keine klaren News-Karten verfügbar."],
+      ["Warum relevant", ordered.length ? "Ich priorisiere direkte Watchlist-Treffer, hohe Relevanz und Asset-/Sektor-Bezug." : "Ohne Watchlist bewerte ich allgemeine Markt- und Asset-News."],
+      ["Mögliches Risiko", "News können kurzfristige Volatilität erhöhen. Beobachte Kursreaktion, Volumen und ob mehrere Assets aus demselben Sektor reagieren."],
+      ["Was beobachten", "Öffne News Impact, prüfe betroffene Assets und setze bei hoher Relevanz einen Alert."]
+    ], context, ["News", context.watchlist.length ? "Watchlist" : "Markt", "Risiko"]);
   }
 
-  if (["ter", "index", "ausschütt", "replikation", "etf"].some((word) => lower.includes(word))) {
+  if (analysis.intent === "alert") {
     return formatAssistantSections([
-      ["Kurzfazit", "ETF-Kennzahlen helfen zu verstehen, ob ein Fonds günstig, breit gestreut und passend zum gewünschten Markt ist."],
-      ["TER", "TER sind laufende jährliche Kosten. Niedriger ist gut, aber Index, Tracking und Diversifikation sind ebenfalls wichtig."],
-      ["Pro-Kontext", active.type === "ETF" ? proDeepDive(active, context) : "Bei ETFs prüft Pro Kosten, Index, Regionen, Sektoren, Replikation und ähnliche ETFs."],
-      ["Hinweis", "Keine Anlageberatung."]
-    ]);
+      ["Kurzfazit", `Für ${active.name} passen je nach Ziel Price Above/Below, 24h Movement, Volatility Spike, News Impact High oder Risk Level Change.`],
+      ["Konkrete Formulierung", `Beispiel: "${active.symbol}: 24h Bewegung über 3 Prozent" oder "${active.symbol}: News Impact High". Bei Krypto eher Volatilität, bei ETFs eher Trend-/Risk-Level, bei Aktien News/Earnings beachten.`],
+      ["Plan-Hinweis", state.currentPlan === "free" ? "Free erlaubt 1 Preisalarm. Starter erlaubt 5 Preisalarme. Pro schaltet Smart Alerts frei." : hasPlan("elite") ? "Elite erlaubt Advanced Smart Alerts und Multi-Condition Alerts." : "Pro erlaubt Smart Alerts mit News-, Volatilitäts- und Risiko-Kontext."],
+      ["Nächste Aktion", "Alert Center öffnen oder Smart Alert erstellen."]
+    ], context, ["Alerts", "Asset", "Plan"]);
   }
 
-  if (["bitcoin", "ethereum", "altcoin", "ath", "supply", "krypto"].some((word) => lower.includes(word))) {
+  if (analysis.intent === "learning") {
+    const key = analysis.metricKey || Object.keys(ASSISTANT_METRIC_COPY).find((item) => normalizeAssistantInput(message).includes(normalizeAssistantInput(item))) || "data quality";
     return formatAssistantSections([
-      ["Kurzfazit", `${active.name} wird im Krypto-Kontext vor allem über Momentum, Liquidität, Volatilität und Sentiment eingeordnet.`],
-      ["Was die Daten zeigen", `Aktueller Zeitraum ${context.activeTimeframe}, Bewegung ${movement}, Risiko ${active.risk}, Datenstatus ${healthLabel(quote?.health)}.`],
-      ["Worauf achten", "ATH-Distanz, Volumen, große Marktbewegungen, News Impact und schnelle Gegenbewegungen."],
-      ["Hinweis", "Keine Anlageberatung."]
-    ]);
+      ["Kurzfazit", ASSISTANT_METRIC_COPY[key] || "Der Begriff beschreibt einen Baustein für Risiko-, Bewertungs- oder Datenqualität."],
+      ["Aktueller Kontext", `${active.name}: Asset-Typ ${active.type}, Risiko ${active.risk}, Bewegung ${movement}, Datenstatus ${healthLabel(quote?.health)}.`],
+      ["Pro-/Elite-Tiefe", hasPlan("pro") ? proDeepDive(active, context) : "Free erklärt den Begriff allgemein. Pro/Elite beziehen ihn stärker auf aktives Asset, Watchlist und Chart."]
+    ], context, ["Learning", "Asset", "Plan"]);
+  }
+
+  if (analysis.intent === "risk") {
+    return formatAssistantSections([
+      ["Kurzfazit", `${active.name} hat Risiko-Level ${active.risk}. Bewegung im aktuellen Zeitraum: ${movement}.`],
+      ["Mögliche Risikotreiber", active.type === "Krypto" ? "Krypto reagiert stark auf Sentiment, Liquidität, Makro-News und schnelle Gewinnmitnahmen." : active.type === "ETF" ? "ETF-Risiken liegen in Indexkonzentration, Zinsen, Währung, Sektorgewicht und Tracking." : "Aktienrisiken liegen in Bewertung, Earnings, Sektorrotation, Regulierung und Gesamtmarkt."],
+      ["Worauf achten", "Volatilität, weitere Tagesbewegung, News Impact, Datenqualität und ob mehrere Zeiträume dieselbe Richtung zeigen."],
+      ["Plan-Tiefe", assistantPlanDepthLine(context, "risk")]
+    ], context, ["Risiko", "Chart", "News", "Plan"]);
+  }
+
+  if (analysis.intent === "app-help") {
+    return formatAssistantSections([
+      ["Kurzfazit", "Ich kann dich durch die App führen: Asset öffnen, Watchlist pflegen, Alerts formulieren, Compare starten, News Impact prüfen oder Pläne vergleichen."],
+      ["Aktueller Kontext", `Du bist in ${assistantContextLabel(context.activeView)}. Aktives Asset: ${active.name}.`],
+      ["Nächste Aktion", "Sag zum Beispiel: 'Erstelle einen Preisalarm', 'Vergleiche Apple und Nvidia' oder 'Welche News betreffen meine Watchlist?'"]
+    ], context, ["App", "Kontext"]);
+  }
+
+  if (analysis.intent === "unclear") {
+    return formatAssistantSections([
+      ["Kurzfazit", "Ich bin mir nicht sicher, ob du nach einem Asset, einer Watchlist oder einem Plan fragst."],
+      ["Rückfrage", "Meinst du eine Marktanalyse, einen Vergleich, News Impact oder Hilfe zur Website?"],
+      ["Mögliche nächste Schritte", "Asset analysieren, Watchlist prüfen, News erklären, Plan vergleichen oder Alert erstellen."]
+    ], context, ["Fallback", "Plan"]);
   }
 
   return formatAssistantSections([
-    ["Kurzfazit", `${active.name} (${active.symbol}) ist im Fokus. Bewegung ${movement}, Risiko ${active.risk}, AI-Sentiment ${sentimentFromChange(quote?.changePct)}.`],
-    ["Was die Daten zeigen", `${active.type} · ${assetSector(active)} · Zeitraum ${context.activeTimeframe} · Datenqualität ${confidenceScore(context)}.`],
-    ["Mögliche Gründe", relevantNews.length ? `News-Kontext: ${relevantNews.map((item) => item.title).join(" · ")}.` : "Mögliche Treiber sind Marktstimmung, Sektorbewegung, Volatilität und Datenqualität."],
-    [plan.name, proLine],
-    planDepth,
-    ["Hinweis", "Keine Anlageberatung."]
-  ]);
+    ["Kurzfazit", `${active.name} (${active.symbol}) ist im Fokus. Kurs ${price}, Bewegung ${movement}, Risiko ${active.risk}, Sentiment ${sentimentFromChange(quote?.changePct)}.`],
+    ["Was die Daten zeigen", `${active.type} · ${assetSector(active)} · Zeitraum ${context.activeTimeframe} · Datenquelle ${quote?.source || context.dataSource} · Datenqualität ${confidenceScore(context)}.`],
+    ["Mögliche Gründe", news.length ? `Relevanter News-Kontext: ${news.map((item) => item.title).join(" · ")}.` : "Mögliche Treiber sind Marktstimmung, Sektorbewegung, Volatilität, Liquidität und Datenqualität."],
+    ["Worauf du achten solltest", "Vergleiche mehrere Zeiträume, prüfe News Impact, setze Alerts für Schwellenwerte und beobachte Risikoänderungen."],
+    ["Plan-Tiefe", assistantPlanDepthLine(context, analysis.intent)]
+  ], context, usedBase);
+}
+
+function assistantActionsForIntent(message, context = assistantContext()) {
+  const analysis = detectAssistantIntent(message, context);
+  const active = analysis.mentioned[0] || context.asset;
+  const actions = [];
+  const add = (label, action, extra = {}) => actions.push({ label, action, ...extra });
+  if (analysis.intent === "plan" || analysis.intent === "report" || analysis.intent === "scenario" || analysis.intent === "business") {
+    const normalizedMessage = normalizeAssistantInput(message);
+    const mentionedPlan = ["business", "elite", "pro", "starter"].find((key) => normalizedMessage.includes(key));
+    const target = analysis.intent === "business" || mentionedPlan === "business"
+      ? "business"
+      : analysis.intent === "scenario" || analysis.intent === "report" || mentionedPlan === "elite"
+        ? "elite"
+        : mentionedPlan === "starter"
+          ? "starter"
+          : "pro";
+    add("Pläne vergleichen", "pricing-open");
+    if (hasPlan(target)) {
+      add(target === "business" ? "Business Dashboard öffnen" : `${PLAN_CONFIG[target].name} öffnen`, target === "business" ? "report-open" : "upgrade-open", { plan: target });
+    } else {
+      add(target === "business" ? "Business anfragen" : `Upgrade auf ${PLAN_CONFIG[target].name}`, "upgrade-open", { plan: target });
+    }
+  }
+  if (["asset-analysis", "chart", "risk", "learning", "crypto", "stock", "etf", "advice"].includes(analysis.intent)) {
+    add(`${active.name} analysieren`, "asset-open", { symbol: active.symbol });
+    add("Smart Alert erstellen", "alert-create", { symbol: active.symbol });
+    add("News Impact öffnen", "news-open");
+  }
+  if (analysis.intent === "watchlist" || analysis.intent === "briefing") {
+    add("Watchlist öffnen", "watchlist-open");
+    add(`${active.name} hinzufügen`, "watchlist-add", { symbol: active.symbol });
+    add("Briefing-Modul öffnen", "report-open");
+  }
+  if (analysis.intent === "compare") {
+    add("Vergleich starten", "compare-start", { symbol: active.symbol });
+  }
+  if (analysis.intent === "news") add("News anzeigen", "news-open");
+  if (analysis.intent === "alert") add("Alert erstellen", "alert-create", { symbol: active.symbol });
+  if (analysis.intent === "unclear") {
+    add("Asset analysieren", "asset-open", { symbol: active.symbol });
+    add("Watchlist prüfen", "watchlist-open");
+    add("Plan vergleichen", "pricing-open");
+    add("Alert erstellen", "alert-create", { symbol: active.symbol });
+  }
+  return actions.slice(0, 4);
 }
 
 function renderAssistantMessages() {
-  selectors.assistantMessages.innerHTML = state.assistantMessages.map((message) => `<div class="assistant-message ${message.role}"><strong>${message.role === "user" ? "Du" : "Nexus AI"}</strong><p>${escapeHTML(message.text).replace(/\n/g, "<br>")}</p></div>`).join("") || `<div class="assistant-message"><strong>Nexus AI</strong><p>Frag mich nach Bewegungen, Risiken, Watchlist, News, ETFs, Krypto oder Vergleichen. Ich nutze den aktuellen Website-Kontext.</p></div>`;
+  const visible = state.assistantMessages.slice(-20);
+  state.assistantMessages = visible;
+  selectors.assistantMessages.innerHTML = visible.map((message) => {
+    const actions = Array.isArray(message.actions) && message.actions.length
+      ? `<div class="assistant-actions">${message.actions.map((action) => `<button type="button" data-assistant-action="${escapeHTML(action.action)}" data-symbol="${escapeHTML(action.symbol || "")}" data-plan="${escapeHTML(action.plan || "")}">${escapeHTML(action.label)}</button>`).join("")}</div>`
+      : "";
+    return `<div class="assistant-message ${message.role}"><strong>${message.role === "user" ? "Du" : "Nexus AI"}</strong><p>${escapeHTML(message.text).replace(/\n/g, "<br>")}</p>${actions}</div>`;
+  }).join("") || `<div class="assistant-message"><strong>Nexus AI</strong><p>Frag mich nach Märkten, Watchlist, News, Risiko, Charts, Kennzahlen, Alerts, Vergleichen oder Plänen. Ich nutze den aktuellen App-Kontext und respektiere deinen Plan.</p></div>`;
   selectors.assistantMessages.scrollTop = selectors.assistantMessages.scrollHeight;
 }
 
 function askAssistant(question) {
+  resetAssistantDailyUsage();
   const key = todayKey();
   const limit = getPlanLimit("aiQuestions");
   if (limit !== Infinity && (state.assistantDaily[key] || 0) >= limit) {
     const required = state.currentPlan === "free" ? "starter" : "pro";
+    state.assistantMessages.push({
+      role: "ai",
+      text: `Du hast dein heutiges AI-Limit erreicht. Starter gibt dir 10 Fragen pro Tag, Pro schaltet unbegrenzte AI-Fragen frei. Du kannst morgen weiterfragen oder dir die Upgrades ansehen.`,
+      actions: [
+        { label: "Upgrade ansehen", action: "upgrade-open", plan: required },
+        { label: "Morgen weiterfragen", action: "pricing-open" }
+      ],
+      intent: "limit",
+      plan: currentPlanConfig().name
+    });
+    renderAssistantMessages();
     openUpgradeModal(required, "AI-Fragen-Limit erreicht", `${currentPlanConfig().name} erlaubt ${limit} AI-Fragen pro Tag. ${PLAN_CONFIG[required].name} erweitert deine Nutzung.`);
+    saveAssistant();
     updateProUI();
     return;
   }
+  const context = assistantContext();
+  const analysis = detectAssistantIntent(question, context);
   if (limit !== Infinity) state.assistantDaily[key] = (state.assistantDaily[key] || 0) + 1;
   state.assistantMessages.push({ role: "user", text: question });
-  state.assistantMessages.push({ role: "ai", text: "Nexus AI analysiert Kontext, Watchlist, News und Datenqualität..." });
+  state.assistantMessages.push({ role: "ai", text: "Nexus AI analysiert Kontext, Datenqualität und Plan-Zugriff ...", intent: "loading", plan: currentPlanConfig().name });
   renderAssistantMessages();
   window.setTimeout(() => {
-    state.assistantMessages[state.assistantMessages.length - 1] = { role: "ai", text: generateAssistantResponse(question) };
+    const answerContext = assistantContext();
+    state.assistantMessages[state.assistantMessages.length - 1] = {
+      role: "ai",
+      text: generateAssistantResponse(question, answerContext),
+      actions: assistantActionsForIntent(question, answerContext),
+      intent: analysis.intent,
+      plan: currentPlanConfig().name
+    };
+    state.assistantMessages = state.assistantMessages.slice(-20);
     saveAssistant();
     renderAssistantMessages();
     updateProUI();
-  }, 420);
+  }, 520);
   saveAssistant();
   updateProUI();
 }
@@ -3780,6 +4154,91 @@ selectors.assistantSuggestions.addEventListener("click", (event) => {
   const question = event.target.closest("[data-question]")?.dataset.question;
   if (question) askAssistant(question);
 });
+
+function handleAssistantAction(button) {
+  const action = button.dataset.assistantAction;
+  const symbol = button.dataset.symbol;
+  const plan = normalizePlan(button.dataset.plan || "pro");
+  const asset = assets.find((item) => item.symbol === symbol) || state.activeAsset;
+  if (action === "asset-open") {
+    selectAsset(asset);
+    setActiveView("analysis");
+    window.setTimeout(() => scrollToDetailPanel(), 180);
+    showToast(`${asset.name} Analyse geöffnet.`);
+    return;
+  }
+  if (action === "watchlist-add") {
+    const limit = getPlanLimit("watchlist");
+    if (!state.savedSymbols.has(asset.symbol) && state.savedSymbols.size >= limit) {
+      const required = state.currentPlan === "free" ? "starter" : "pro";
+      openUpgradeModal(required, "Watchlist-Limit erreicht", `${currentPlanConfig().name} erlaubt ${planLimitLabel(limit)} Watchlist-Werte.`);
+      return;
+    }
+    state.savedSymbols.add(asset.symbol);
+    saveWatchlist();
+    renderSavedWatchlist();
+    queueRenderAssets();
+    updateWatchlistButton();
+    setActiveView("watchlist");
+    showToast(`${asset.name} wurde zur Watchlist hinzugefügt.`);
+    return;
+  }
+  if (action === "watchlist-open") {
+    setActiveView("watchlist");
+    showToast("Watchlist geöffnet.");
+    return;
+  }
+  if (action === "alert-create") {
+    setActiveView("alerts");
+    openModal("alert", asset);
+    return;
+  }
+  if (action === "compare-start") {
+    const limit = getPlanLimit("compare");
+    if (!limit) {
+      openUpgradeModal("starter", "Compare erforderlich", "Starter schaltet den einfachen Vergleich mit 2 Assets frei. Pro erweitert den Compare-Kontext.");
+      return;
+    }
+    const starterPair = [asset.symbol, assets.find((item) => item.symbol === "NVDA")?.symbol].filter(Boolean);
+    starterPair.forEach((itemSymbol) => {
+      if (state.compareSymbols.size < limit || limit === Infinity) state.compareSymbols.add(itemSymbol);
+    });
+    saveCompare();
+    renderCompareTray();
+    setActiveView("compare");
+    showToast("Vergleich gestartet.");
+    return;
+  }
+  if (action === "news-open") {
+    setActiveView("news");
+    showToast("News Impact geöffnet.");
+    return;
+  }
+  if (action === "report-open") {
+    if (!hasPlan("pro")) {
+      openUpgradeModal("pro", "Report Preview", featureUpgradeCopy("reportPreview"));
+      return;
+    }
+    setActiveView("pro");
+    window.setTimeout(() => runProDashboardAction("report"), 180);
+    return;
+  }
+  if (action === "upgrade-open") {
+    if (plan === "business") openBusinessContactModal();
+    else startCheckout(plan);
+    return;
+  }
+  if (action === "pricing-open") {
+    setActiveView("pricing");
+    return;
+  }
+}
+
+selectors.assistantMessages.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-assistant-action]");
+  if (button) handleAssistantAction(button);
+});
+
 selectors.assistantForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const question = selectors.assistantInput.value.trim();
@@ -3942,6 +4401,7 @@ window.addEventListener("resize", () => {
 });
 
 syncPlanFlags();
+resetAssistantDailyUsage();
 renderPricing();
 setStatus("Marktdaten verbunden", "live");
 bootInterfaceEffects();

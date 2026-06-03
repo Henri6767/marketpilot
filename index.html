@@ -1207,8 +1207,12 @@
     <aside class="assistant-drawer" id="assistantDrawer" hidden aria-label="AI Market Assistant">
       <div class="assistant-head">
         <div>
-          <span class="panel-label">Nexus AI Assistant</span>
+          <span class="panel-label">Nexus AI</span>
           <h2>Frag dein Markt-Cockpit</h2>
+          <div class="assistant-badges" aria-label="Assistant Status">
+            <span id="assistantPlanBadge">Free</span>
+            <span id="assistantDataBadge">Datenstatus</span>
+          </div>
         </div>
         <button class="modal-close" id="assistantClose" type="button" aria-label="Assistant schließen">×</button>
       </div>
@@ -1217,7 +1221,7 @@
         <strong id="assistantContextLine">Aktives Asset, Watchlist, News, Compare und Alerts</strong>
       </div>
       <div class="assistant-limit" id="assistantLimit">3/3 Free-Fragen übrig</div>
-      <p id="assistantAccessText">Free: 3 Fragen pro Tag. Pro: unbegrenzt mit Watchlist-, News- und Risikoanalyse.</p>
+      <p id="assistantAccessText">Free: 3 Fragen pro Tag. Starter erweitert den Kontext, Pro und höher schalten unbegrenzte AI frei.</p>
       <div class="assistant-suggestions" id="assistantSuggestions">
         <button type="button" data-question="Warum bewegt sich dieses Asset?">Warum bewegt sich dieses Asset?</button>
         <button type="button" data-question="Analysiere meine Watchlist">Analysiere meine Watchlist</button>
@@ -1229,7 +1233,7 @@
       </div>
       <div class="assistant-messages" id="assistantMessages"></div>
       <form class="assistant-form" id="assistantForm">
-        <textarea id="assistantInput" rows="1" placeholder="Frag Nexus AI zu Markt, Asset oder Watchlist..."></textarea>
+        <textarea id="assistantInput" rows="1" placeholder="Frag Nexus AI zu Märkten, Watchlist, News, Risiko oder Plänen ..."></textarea>
         <button class="primary-action" type="submit">Senden</button>
       </form>
     </aside>
