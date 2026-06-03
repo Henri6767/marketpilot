@@ -140,67 +140,115 @@
           </article>
         </div>
         <div class="retention-grid" aria-label="Persönliches Cockpit">
-          <button type="button" data-widget-target="#briefing">
-            <span class="panel-label">Seit deinem letzten Besuch</span>
-            <strong id="retentionVisit">AI Briefing bereit</strong>
-            <p>Neue Bewegungen, Datenstatus und Watchlist-Signale werden priorisiert.</p>
+          <button class="insight-card featured-insight" type="button" data-widget-target="#briefing">
+            <span class="insight-card-header">
+              <span class="insight-icon icon-ai" aria-hidden="true">AI</span>
+              <span class="insight-title">Seit deinem letzten Besuch</span>
+            </span>
+            <strong class="insight-value" id="retentionVisit">AI Briefing bereit</strong>
+            <span class="insight-description">Neue Bewegung erkannt.</span>
+            <span class="insight-cta">Öffnen →</span>
           </button>
-          <button type="button" data-widget-target="#watchlist">
-            <span class="panel-label">Watchlist braucht Aufmerksamkeit</span>
-            <strong id="retentionWatchlist">3 Werte hinzufügen</strong>
-            <p>Persönliche Pulse-Checks machen tägliche Rückkehr sinnvoll.</p>
+          <button class="insight-card featured-insight" type="button" data-widget-target="#watchlist">
+            <span class="insight-card-header">
+              <span class="insight-icon icon-watchlist" aria-hidden="true">WL</span>
+              <span class="insight-title">Watchlist braucht Aufmerksamkeit</span>
+            </span>
+            <strong class="insight-value" id="retentionWatchlist">3 Werte hinzufügen</strong>
+            <span class="insight-description">Starte dein persönliches Briefing.</span>
+            <span class="insight-cta">Öffnen →</span>
           </button>
-          <button type="button" data-widget-target="#alerts">
-            <span class="panel-label">Aktive Smart Alerts</span>
-            <strong id="retentionAlerts">0 aktiv</strong>
-            <p>Preis-, Risiko- und News-Trigger bleiben lokal sichtbar.</p>
+          <button class="insight-card featured-insight" type="button" data-widget-target="#alerts">
+            <span class="insight-card-header">
+              <span class="insight-icon icon-alerts" aria-hidden="true">AL</span>
+              <span class="insight-title">Aktive Smart Alerts</span>
+            </span>
+            <strong class="insight-value" id="retentionAlerts">0 aktiv</strong>
+            <span class="insight-description">Preis-, Risiko- und News-Alarme.</span>
+            <span class="insight-cta">Öffnen →</span>
           </button>
-          <button type="button" data-widget-target="#news">
-            <span class="panel-label">Neue relevante News</span>
-            <strong>3 Impact-Signale</strong>
-            <p>News werden nach Relevanz, Assetklasse und Watchlist-Kontext eingeordnet.</p>
+          <button class="insight-card featured-insight" type="button" data-widget-target="#news">
+            <span class="insight-card-header">
+              <span class="insight-icon icon-news" aria-hidden="true">NW</span>
+              <span class="insight-title">Neue relevante News</span>
+            </span>
+            <strong class="insight-value">3 Impact-Signale</strong>
+            <span class="insight-description">Nach Relevanz kuratiert.</span>
+            <span class="insight-cta">Öffnen →</span>
           </button>
         </div>
         <div class="dashboard-widgets" id="dashboardWidgets">
-          <button class="dashboard-widget" type="button" data-widget-target="#briefing">
-            <span>Gesamtmarkt-Stimmung</span>
-            <strong id="widgetSentiment">Neutral</strong>
-            <small>Aus geladenen Assets berechnet</small>
+          <button class="dashboard-widget insight-card" type="button" data-widget-target="#briefing">
+            <span class="insight-card-header">
+              <span class="insight-icon icon-ai" aria-hidden="true">AI</span>
+              <span class="insight-title">Gesamtmarkt-Stimmung</span>
+            </span>
+            <strong class="insight-value" id="widgetSentiment">Neutral</strong>
+            <span class="insight-description">Aus geladenen Assets berechnet.</span>
+            <span class="insight-cta">Öffnen →</span>
           </button>
-          <button class="dashboard-widget" type="button" data-widget-target="#markets">
-            <span>Stärkste Bewegung</span>
-            <strong id="widgetTopMover">Top Mover</strong>
-            <small>Top Gewinner und Verlierer</small>
+          <button class="dashboard-widget insight-card" type="button" data-widget-target="#markets">
+            <span class="insight-card-header">
+              <span class="insight-icon icon-mover" aria-hidden="true">MV</span>
+              <span class="insight-title">Stärkste Bewegung</span>
+            </span>
+            <strong class="insight-value" id="widgetTopMover">Top Mover</strong>
+            <span class="insight-description">Top-Mover im aktuellen Snapshot.</span>
+            <span class="insight-cta">Öffnen →</span>
           </button>
-          <button class="dashboard-widget warning" type="button" data-widget-target="#briefing">
-            <span>Risk Radar</span>
-            <strong id="widgetRisk">Risk Radar aktiv</strong>
-            <small>Warnungen und Ausreißer</small>
+          <button class="dashboard-widget insight-card warning" type="button" data-widget-target="#briefing">
+            <span class="insight-card-header">
+              <span class="insight-icon icon-risk" aria-hidden="true">RK</span>
+              <span class="insight-title">Risk Radar</span>
+            </span>
+            <strong class="insight-value" id="widgetRisk">Risk Radar aktiv</strong>
+            <span class="insight-description">Warnungen und Ausreißer.</span>
+            <span class="insight-cta">Öffnen →</span>
           </button>
-          <button class="dashboard-widget" type="button" data-widget-target="#watchlist">
-            <span>Watchlist Snapshot</span>
-            <strong id="widgetWatchlist">0 Assets</strong>
-            <small>Persönliche Updates</small>
+          <button class="dashboard-widget insight-card" type="button" data-widget-target="#watchlist">
+            <span class="insight-card-header">
+              <span class="insight-icon icon-watchlist" aria-hidden="true">WL</span>
+              <span class="insight-title">Watchlist Snapshot</span>
+            </span>
+            <strong class="insight-value" id="widgetWatchlist">0 Assets</strong>
+            <span class="insight-description">Noch keine Watchlist-Werte.</span>
+            <span class="insight-cta">Öffnen →</span>
           </button>
-          <button class="dashboard-widget" type="button" data-widget-target="#news">
-            <span>News Impact</span>
-            <strong>3 Impact-Signale</strong>
-            <small>Kuratiert nach Relevanz</small>
+          <button class="dashboard-widget insight-card" type="button" data-widget-target="#news">
+            <span class="insight-card-header">
+              <span class="insight-icon icon-news" aria-hidden="true">NW</span>
+              <span class="insight-title">News Impact</span>
+            </span>
+            <strong class="insight-value">3 Signale</strong>
+            <span class="insight-description">Relevante Marktimpulse.</span>
+            <span class="insight-cta">Öffnen →</span>
           </button>
-          <button class="dashboard-widget" type="button" data-widget-target="#alerts">
-            <span>Alerts</span>
-            <strong id="widgetAlerts">0 aktiv</strong>
-            <small>Preis- und Risikoalarme</small>
+          <button class="dashboard-widget insight-card" type="button" data-widget-target="#alerts">
+            <span class="insight-card-header">
+              <span class="insight-icon icon-alerts" aria-hidden="true">AL</span>
+              <span class="insight-title">Alerts</span>
+            </span>
+            <strong class="insight-value" id="widgetAlerts">0 aktiv</strong>
+            <span class="insight-description">Keine aktiven Alarme.</span>
+            <span class="insight-cta">Öffnen →</span>
           </button>
-          <button class="dashboard-widget" type="button" data-widget-target="#compare">
-            <span>Compare</span>
-            <strong id="widgetCompare">0 gewählt</strong>
-            <small>2 bis 4 Assets vergleichen</small>
+          <button class="dashboard-widget insight-card" type="button" data-widget-target="#compare">
+            <span class="insight-card-header">
+              <span class="insight-icon icon-compare" aria-hidden="true">CP</span>
+              <span class="insight-title">Compare</span>
+            </span>
+            <strong class="insight-value" id="widgetCompare">0 gewählt</strong>
+            <span class="insight-description">2 bis 4 Assets vergleichen.</span>
+            <span class="insight-cta">Öffnen →</span>
           </button>
-          <button class="dashboard-widget" type="button" data-widget-target="#legal">
-            <span>Datenstatus</span>
-            <strong id="widgetDataHealth">Live/Cache</strong>
-            <small>Quellen transparent sichtbar</small>
+          <button class="dashboard-widget insight-card" type="button" data-widget-target="#legal">
+            <span class="insight-card-header">
+              <span class="insight-icon icon-data" aria-hidden="true">DS</span>
+              <span class="insight-title">Datenstatus</span>
+            </span>
+            <strong class="insight-value" id="widgetDataHealth">Live/Cache</strong>
+            <span class="insight-description">Quellen transparent sichtbar.</span>
+            <span class="insight-cta">Öffnen →</span>
           </button>
         </div>
       </section>
@@ -488,11 +536,11 @@
             <div class="ai-asset-grid detail-tab-panel" data-detail-panel="ai">
               <article>
                 <span class="panel-label">AI Summary</span>
-                <p id="assetAiSummary">Kurzfazit, mögliche Treiber und Risiko-Hinweise erscheinen nach Asset-Auswahl.</p>
+                <p id="assetAiSummary">Bitcoin bleibt im gewählten Zeitraum volatil. Datenqualität: Cache. Krypto-Risiko: hoch. Keine Anlageberatung.</p>
               </article>
               <article>
                 <span class="panel-label">Mögliche Chance</span>
-                <p id="assetOpportunities">Wird nach Datenlage eingeordnet.</p>
+                <p id="assetOpportunities">Momentum, Liquidität und News-Lage werden aus dem aktuellen Datenstatus abgeleitet.</p>
               </article>
               <article>
                 <span class="panel-label">Mögliches Risiko</span>
@@ -515,7 +563,7 @@
             <div class="detail-extra-grid detail-tab-panel" data-detail-panel="metrics">
               <article>
                 <span class="panel-label">Asset-Typ-Kennzahlen</span>
-                <p id="assetMetricsDeep">Typgerechte Kennzahlen für Aktien, ETFs und Krypto sind vorbereitet.</p>
+                <p id="assetMetricsDeep">Krypto: Market Cap, Volumen, Abstand zum Hoch und Volatilität. Aktien und ETFs zeigen passende Kennzahlen nach Asset-Typ.</p>
               </article>
               <article>
                 <span class="panel-label">Datenqualität</span>
@@ -713,8 +761,8 @@
       <section class="premium-section" id="pro">
         <div class="section-heading">
           <p class="eyebrow">Premium Cockpit</p>
-          <h2>AI-gestützte Marktmodule, die Pro spürbar wertvoll machen</h2>
-          <p>Pro macht aus Marktdaten persönliche Marktintelligenz: Assistant, Radar, Watchlist Pulse, Smart Alerts und Briefings reagieren auf dein aktives Asset, News, Alerts und Vergleichswerte.</p>
+          <h2>Premium-Module für Starter, Pro, Elite und Business</h2>
+          <p>MarketPilot Nexus erweitert Marktdaten je Plan zu Watchlist-Briefings, Smart Alerts, Deep Analysis, Reports, Exporten und Team-Workflows.</p>
         </div>
         <div class="premium-status">
           <div>
@@ -732,13 +780,13 @@
           <div class="access-actions">
             <button class="primary-action" id="openCheckout" type="button">Pro kaufen</button>
             <button class="secondary-action" id="openAccessModal" type="button">Code einlösen</button>
-            <button class="secondary-action developer-reset" id="resetDemoAccess" type="button" hidden>Developer Access zurücksetzen</button>
+            <button class="secondary-action developer-reset" id="resetDemoAccess" type="button" hidden>Demo-Zugang zurücksetzen</button>
           </div>
         </div>
         <div class="premium-grid">
           <article class="premium-card radar-card" data-feature-card="Market Radar">
             <div class="card-headline">
-              <span class="feature-icon" aria-hidden="true">R</span>
+              <span class="feature-icon" aria-hidden="true"></span>
               <div>
                 <span class="panel-label">Market Radar</span>
                 <h3>Risiko, Momentum und Relevanz auf einen Blick</h3>
@@ -756,7 +804,7 @@
           </article>
           <article class="premium-card" data-feature-card="Risk Map">
             <div class="card-headline">
-              <span class="feature-icon" aria-hidden="true">M</span>
+              <span class="feature-icon" aria-hidden="true"></span>
               <div>
                 <span class="panel-label">AI Opportunity & Risk Map</span>
                 <h3>Neutrale Einordnung nach Chance und Risiko</h3>
@@ -767,7 +815,7 @@
           </article>
           <article class="premium-card requires-pro" data-feature-card="Watchlist Pulse">
             <div class="card-headline">
-              <span class="feature-icon" aria-hidden="true">W</span>
+              <span class="feature-icon" aria-hidden="true"></span>
               <div>
                 <span class="panel-label">Watchlist Pulse</span>
                 <h3>Was seit deinem letzten Besuch auffällt</h3>
@@ -780,7 +828,7 @@
           </article>
           <article class="premium-card requires-pro" data-feature-card="News Impact Scanner">
             <div class="card-headline">
-              <span class="feature-icon" aria-hidden="true">N</span>
+              <span class="feature-icon" aria-hidden="true"></span>
               <div>
                 <span class="panel-label">News Impact Scanner</span>
                 <h3>News nach Score, Assets und Watchlist-Kontext</h3>
@@ -791,7 +839,7 @@
           </article>
           <article class="premium-card" data-feature-card="Compare Battle">
             <div class="card-headline">
-              <span class="feature-icon" aria-hidden="true">C</span>
+              <span class="feature-icon" aria-hidden="true"></span>
               <div>
                 <span class="panel-label">Compare Battle</span>
                 <h3>Assets neutral gegenüberstellen</h3>
@@ -802,7 +850,7 @@
           </article>
           <article class="premium-card requires-pro" data-feature-card="Smart Alerts">
             <div class="card-headline">
-              <span class="feature-icon" aria-hidden="true">A</span>
+              <span class="feature-icon" aria-hidden="true"></span>
               <div>
                 <span class="panel-label">Smart Alerts</span>
                 <h3>Preis-, Volatilitäts- und News-Trigger</h3>
@@ -832,7 +880,7 @@
           </article>
           <article class="premium-card requires-pro" data-feature-card="AI Briefing Generator">
             <div class="card-headline">
-              <span class="feature-icon" aria-hidden="true">B</span>
+              <span class="feature-icon" aria-hidden="true"></span>
               <div>
                 <span class="panel-label">AI Briefing Generator</span>
                 <h3>Briefings nach Markt, Watchlist oder Assetklasse</h3>
@@ -856,7 +904,7 @@
           </article>
           <article class="premium-card" data-feature-card="Confidence">
             <div class="card-headline">
-              <span class="feature-icon" aria-hidden="true">L</span>
+              <span class="feature-icon" aria-hidden="true"></span>
               <div>
                 <span class="panel-label">Confidence & Learning Layer</span>
                 <h3>Datenqualität und Begriffe verständlich erklärt</h3>
@@ -928,22 +976,21 @@
             <p>Wähle ein Pro-Modul. Free zeigt eine Vorschau, Pro führt die Aktion direkt im Cockpit aus.</p>
           </div>
         </section>
-        <div class="pro-compare-table" aria-label="Free Pro Vergleich">
+        <div class="pro-compare-table" aria-label="Plan Value Ladder">
           <div class="table-toolbar">
             <div>
-              <span class="panel-label">Free vs Pro</span>
-              <h3>Warum Pro spürbar mehr spart als nur Klicks</h3>
+              <span class="panel-label">Value Ladder</span>
+              <h3>Warum jeder Plan den nächsten Schritt lohnt</h3>
             </div>
           </div>
           <table>
-            <thead><tr><th>Feature</th><th>Free</th><th>Pro</th></tr></thead>
+            <thead><tr><th>Upgrade</th><th>Starter</th><th>Pro</th><th>Elite</th><th>Business</th></tr></thead>
             <tbody>
-              <tr><td>Watchlist</td><td>Basis, empfohlen bis 5 Werte</td><td>Unbegrenzt mit Pulse, Gewinner/Verlierer und Risiko-Fokus</td></tr>
-              <tr><td>AI Assistant</td><td>3 Fragen/Tag, Basis-Kontext</td><td>Unbegrenzt, Asset-, Watchlist-, News- und Compare-Kontext</td></tr>
-              <tr><td>Smart Alerts</td><td>Einfache Preisalarme</td><td>Volatilität, News Impact, Trendabweichung, Risikoänderung</td></tr>
-              <tr><td>News Impact</td><td>Titel und Kurzfassung</td><td>Impact Score, betroffene Assets, Watchlist-Bezug, Chancen/Risiken</td></tr>
-              <tr><td>Deep Asset Analysis</td><td>Kurzvorschau</td><td>Aktien-, ETF- und Krypto-spezifische Analyse mit Confidence Score</td></tr>
-              <tr><td>Reports</td><td>Nicht verfügbar</td><td>Report vorbereiten, Export-Preview, Verlauf und Datenqualität</td></tr>
+              <tr><td>Von Free</td><td>Mehr Watchlist, AI-Fragen und Alarme</td><td>Unbegrenzte Watchlist und Smart Alerts</td><td>Advanced AI, Reports und Szenarien</td><td>Teams, API, Rollen und Compliance</td></tr>
+              <tr><td>AI Assistant</td><td>10 Fragen mit Basis-Kontext</td><td>Unbegrenzt mit Asset-, News- und Compare-Kontext</td><td>Scenario Analysis und Report Builder</td><td>Team-Kontext und Business Workflows</td></tr>
+              <tr><td>Watchlist</td><td>10 Werte</td><td>Unbegrenzt mit Pulse</td><td>Gruppen und Health Score</td><td>Shared Watchlists und Team Activity</td></tr>
+              <tr><td>Alerts</td><td>5 Preisalarme</td><td>25 Smart Alerts</td><td>Multi-Condition Alerts</td><td>Shared Alerts mit Rollen</td></tr>
+              <tr><td>Reports</td><td>Basis-Briefing</td><td>Report Preview</td><td>Saved Reports und Export Preview</td><td>Team Reports und Compliance Export</td></tr>
             </tbody>
           </table>
         </div>
@@ -952,66 +999,140 @@
       <section class="pricing-section" id="pricing">
         <div class="section-heading">
           <p class="eyebrow">Preise</p>
-          <h2>Starte kostenlos. Werde Pro, wenn du tiefer analysieren willst.</h2>
-          <p>Free gibt dir den Einstieg. Pro schaltet AI Assistant, Watchlist Intelligence, Smart Alerts und tiefere Analysen frei.</p>
+          <h2>Wähle dein Markt-Cockpit</h2>
+          <p>Free zum Testen, Starter für kleine Watchlists, Pro für tägliche AI-Briefings, Elite für Power-User und Business für Teams.</p>
         </div>
-        <div class="pricing-grid">
-          <article>
-            <span class="plan-name">Free</span>
-            <strong>0 €</strong>
-            <p>Für den Einstieg und erste Marktüberblicke.</p>
+        <div class="pricing-toolbar">
+          <div>
+            <span class="panel-label">Abrechnung</span>
+            <strong>Monatlich flexibel</strong>
+          </div>
+          <div class="billing-toggle pricing-cycle-toggle" role="tablist" aria-label="Pricing-Abrechnung">
+            <button class="active" type="button" data-pricing-cycle="monthly">Monatlich</button>
+            <button type="button" data-pricing-cycle="yearly">Jährlich <span>2 Monate sparen</span></button>
+          </div>
+        </div>
+        <div class="pricing-grid subscription-grid">
+          <article class="pricing-plan plan-free">
+            <div class="plan-topline">
+              <span class="plan-name">Free</span>
+              <span class="plan-badge">Einstieg</span>
+            </div>
+            <p>Nutzer, die MarketPilot testen möchten.</p>
+            <div class="plan-price"><strong>0 €</strong><span>pro Monat</span></div>
             <ul class="plan-features">
               <li>3 AI-Fragen pro Tag</li>
-              <li>Basis-Screener und Watchlist</li>
-              <li>Live-/Cache-Datenstatus</li>
+              <li>3 Watchlist-Werte</li>
+              <li>Basis-Marktbriefing und Basis-News</li>
+              <li>1 einfacher Preisalarm</li>
+              <li>Eingeschränkter Screener</li>
             </ul>
-            <button class="secondary-action plan-button" type="button" data-plan="Free">Kostenlos starten</button>
+            <details class="plan-more"><summary>Alle Features anzeigen</summary><ul><li>Basis-Datenstatus</li><li>Basis-Learning-Tooltips</li><li>Kein Report oder Export</li></ul></details>
+            <button class="secondary-action plan-button" type="button" data-plan-key="free">Kostenlos starten</button>
           </article>
-          <article class="featured-plan">
-            <span class="plan-name" id="proPlanBadge">PRO</span>
-            <strong id="proPriceLabel">12,99 €</strong>
-            <p><b>Für Nutzer, die ihre Watchlist täglich verstehen wollen.</b></p>
-            <p>Spart Zeit durch AI-Analysen, Watchlist-Briefings und intelligente Markt-Signale.</p>
+          <article class="pricing-plan plan-starter">
+            <div class="plan-topline">
+              <span class="plan-name">Starter</span>
+              <span class="plan-badge">Günstig</span>
+            </div>
+            <p>Kleine Watchlists mit mehr Struktur.</p>
+            <div class="plan-price"><strong>4,99 €</strong><span>pro Monat</span></div>
+            <ul class="plan-features">
+              <li>10 Watchlist-Werte</li>
+              <li>10 AI-Fragen pro Tag</li>
+              <li>Basis-Watchlist-Briefing</li>
+              <li>5 aktive Preisalarme</li>
+              <li>2-Asset Compare</li>
+            </ul>
+            <details class="plan-more"><summary>Alle Features anzeigen</summary><ul><li>Basis-News Impact</li><li>Learning Basic mit Beispielen</li><li>7 Tage Verlauf</li></ul></details>
+            <button class="secondary-action plan-button" type="button" data-plan-key="starter">Starter wählen</button>
+          </article>
+          <article class="pricing-plan plan-pro sweet-spot">
+            <div class="plan-topline">
+              <span class="plan-name" id="proPlanBadge">Pro</span>
+              <span class="plan-badge">Sweet Spot</span>
+            </div>
+            <p>Tägliche AI-Watchlist-Nutzung und Deep Analysis.</p>
+            <div class="plan-price"><strong id="proPriceLabel">12,99 €</strong><span>pro Monat</span></div>
             <ul class="plan-features">
               <li>Unbegrenzter AI Assistant</li>
+              <li>Unbegrenzte Watchlist</li>
               <li>Watchlist Pulse und Smart Alerts</li>
-              <li>News Impact für deine Watchlist</li>
-              <li>Deep Asset Analysis für Aktien, ETFs und Krypto</li>
-              <li>AI Briefing Generator</li>
-              <li>Reports & Export-Preview</li>
+              <li>Deep Asset Analysis</li>
+              <li>Compare Battle bis 4 Assets</li>
             </ul>
             <p class="pro-active-note" id="proPlanStatusNote" hidden>Dein Pro-Zugang ist aktiv.</p>
-            <button class="primary-action plan-button" type="button" data-plan="Pro" id="proPlanButton">Pro kaufen</button>
+            <details class="plan-more"><summary>Alle Features anzeigen</summary><ul><li>News Impact für Watchlist</li><li>Report Preview</li><li>Confidence Score und Asset Notes</li></ul></details>
+            <button class="primary-action plan-button" type="button" data-plan-key="pro" id="proPlanButton">Pro kaufen</button>
             <button class="link-action" type="button" id="pricingAccessCode">Ich habe einen Nexus Code</button>
           </article>
-          <article>
-            <span class="plan-name">Business</span>
-            <strong>Individuell</strong>
-            <p>Für Teams, Reports, API-Zugriff und professionelle Workflows.</p>
+          <article class="pricing-plan plan-elite elite-plan">
+            <div class="plan-topline">
+              <span class="plan-name">Elite</span>
+              <span class="plan-badge">Max Power</span>
+            </div>
+            <p>Reports, Exporte, Advanced AI und Szenarien.</p>
+            <div class="plan-price"><strong>24,99 €</strong><span>pro Monat</span></div>
             <ul class="plan-features">
-              <li>Team-Workflows und Rollen</li>
-              <li>API, Reports und Adminbereich</li>
-              <li>Datenpakete und Compliance Export</li>
+              <li>Alles aus Pro</li>
+              <li>Advanced AI Assistant</li>
+              <li>Scenario Analysis</li>
+              <li>Saved Reports</li>
+              <li>PDF/CSV Export Preview</li>
             </ul>
-            <button class="secondary-action plan-button" type="button" data-plan="Business">Kontakt aufnehmen</button>
+            <details class="plan-more"><summary>Alle Features anzeigen</summary><ul><li>Watchlist Groups</li><li>Advanced Smart Alerts</li><li>Premium Themes und Early Access Labs</li></ul></details>
+            <button class="primary-action plan-button" type="button" data-plan-key="elite">Elite kaufen</button>
+          </article>
+          <article class="pricing-plan plan-business business-plan">
+            <div class="plan-topline">
+              <span class="plan-name">Business</span>
+              <span class="plan-badge">Teams</span>
+            </div>
+            <p>Teams, API, Rollen, Reports und Compliance.</p>
+            <div class="plan-price"><strong>ab 49,99 €</strong><span>pro Monat oder individuell</span></div>
+            <ul class="plan-features">
+              <li>Alles aus Elite</li>
+              <li>Team Dashboard und Rollen</li>
+              <li>Team-Watchlists und Shared Alerts</li>
+              <li>API Access vorbereitet</li>
+              <li>Compliance Export</li>
+            </ul>
+            <details class="plan-more"><summary>Alle Features anzeigen</summary><ul><li>Admin Controls</li><li>Audit Log Demo</li><li>Business Report Builder</li></ul></details>
+            <button class="secondary-action plan-button" type="button" data-plan-key="business">Kontakt aufnehmen</button>
           </article>
         </div>
-        <div class="pricing-compare">
+        <div class="feature-outcome-panel">
+          <div class="section-heading compact">
+            <p class="eyebrow">Plan-Finder</p>
+            <h2>Welcher Plan passt zu dir?</h2>
+          </div>
+          <div class="plan-fit-grid">
+            <button type="button" data-plan-fit="free"><strong>Ich will nur testen</strong><span>Free</span><p>Basis-Dashboard und erste AI-Fragen.</p></button>
+            <button type="button" data-plan-fit="starter"><strong>Kleine Watchlist</strong><span>Starter</span><p>10 Werte, 10 AI-Fragen und Preisalarme.</p></button>
+            <button type="button" data-plan-fit="pro"><strong>Tägliche AI-Analyse</strong><span>Pro</span><p>Watchlist Pulse, Smart Alerts und Deep Dives.</p></button>
+            <button type="button" data-plan-fit="elite"><strong>Reports & Export</strong><span>Elite</span><p>Advanced AI, Reports, Szenarien und Exporte.</p></button>
+            <button type="button" data-plan-fit="business"><strong>Team, API, Admin</strong><span>Business</span><p>Team Dashboard, Rollen, API und Compliance.</p></button>
+          </div>
+          <div class="plan-fit-result" id="planFitResult">Wähle ein Ziel, um eine Empfehlung zu erhalten.</div>
+        </div>
+        <div class="pricing-compare subscription-compare">
           <table>
             <thead>
               <tr>
                 <th>Feature</th>
                 <th>Free</th>
+                <th>Starter</th>
                 <th>Pro</th>
+                <th>Elite</th>
                 <th>Business</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td>Watchlist</td><td>Begrenzt</td><td>Unbegrenzt</td><td>Teams</td></tr>
-              <tr><td>AI Briefings</td><td>Basis</td><td>Erweitert</td><td>Reports</td></tr>
-              <tr><td>Alerts</td><td>Preis</td><td>Preis, News, Risiko</td><td>Workflows</td></tr>
-              <tr><td>Compare</td><td>2 Assets</td><td>4 Assets</td><td>Portfolio-Views</td></tr>
-              <tr><td>Daten</td><td>Live/Cache</td><td>Mehr Historie</td><td>API & Lizenzen</td></tr>
+              <tr><td>AI & Briefings</td><td>3 kurz</td><td>10 + Basis</td><td>Unbegrenzt</td><td>Advanced AI</td><td>Team-Kontext</td></tr>
+              <tr><td>Watchlist & Alerts</td><td>3 / 1</td><td>10 / 5</td><td>Unbegrenzt / 25</td><td>Gruppen + Regeln</td><td>Shared Workflows</td></tr>
+              <tr><td>Analyse & Daten</td><td>Basis</td><td>Kennzahlen</td><td>Deep Analysis</td><td>Scenario + Advanced</td><td>Data Settings</td></tr>
+              <tr><td>Reports & Export</td><td>Nein</td><td>Basis-Briefing</td><td>Report Preview</td><td>PDF/CSV Preview</td><td>Compliance Export</td></tr>
+              <tr><td>Team & Business</td><td>Nein</td><td>Nein</td><td>Nein</td><td>Nein</td><td>Rollen, API, Audit Log</td></tr>
             </tbody>
           </table>
         </div>
@@ -1037,12 +1158,12 @@
           </article>
           <article>
             <h3>Impressum & Datenschutz</h3>
-            <p>Rechtliche Pflichtangaben, Datenschutz, Zahlungsbedingungen und Anbieterkennzeichnung werden für den kommerziellen Betrieb vollständig bereitgestellt.</p>
+            <p><a href="#legal">Impressum</a> · <a href="#legal">Datenschutz</a> · <a href="#legal">AGB</a> · <a href="#legal">Risikohinweis</a> · <a href="#legal">Methodik</a></p>
           </article>
           <article>
             <h3>Account & Einstellungen</h3>
-            <p>Pro-Status, Watchlist, Notizen und Alarme bleiben lokal in diesem Browser gespeichert. Promo-Codes sind als Zusatzweg vorbereitet und können später serverseitig geprüft werden.</p>
-            <button class="secondary-action developer-reset" id="resetDemoAccessLegal" type="button" hidden>Developer Access zurücksetzen</button>
+            <p>Planstatus, Watchlist, Notizen, Reports und Alarme bleiben lokal in diesem Browser gespeichert. Nexus Codes sind ein zusätzlicher Zugangsweg.</p>
+            <button class="secondary-action developer-reset" id="resetDemoAccessLegal" type="button" hidden>Demo-Zugang zurücksetzen</button>
           </article>
         </div>
       </section>
@@ -1123,7 +1244,7 @@
             <h2 id="accessTitle">Nexus Code einlösen</h2>
           </div>
         </div>
-        <p>Gib deinen Nexus-Code ein. Der Code ist ein Zusatzweg für Promo- oder Testzugänge.</p>
+        <p>Ein gültiger Nexus Code kann einen erweiterten Test- oder Business-Zugang freischalten.</p>
         <label class="field">
           <span>Access Code</span>
           <div class="access-code-field">
@@ -1143,7 +1264,7 @@
       <section class="modal checkout-modal" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
         <button class="modal-close" id="checkoutClose" type="button" aria-label="Checkout schließen">×</button>
         <div class="security-header">
-          <span class="security-icon" aria-hidden="true">Pro</span>
+          <span class="security-icon" aria-hidden="true">PR</span>
           <div>
             <span class="panel-label">MarketPilot Nexus Pro</span>
             <h2 id="checkoutTitle">Pro starten</h2>
@@ -1170,11 +1291,11 @@
         </div>
         <div class="checkout-payment">
           <span class="panel-label">Zahlung</span>
-          <p>Demo-Checkout für die Vorschau. Zahlungsintegration kann später angebunden werden.</p>
+          <p>Demo-Checkout für Vorschauzwecke.</p>
         </div>
         <p class="form-message" id="checkoutMessage"></p>
         <div class="detail-actions">
-          <button class="primary-action" id="completeCheckout" type="button">Pro aktivieren</button>
+          <button class="primary-action" id="completeCheckout" type="button">Demo-Kauf abschließen</button>
           <button class="link-action" id="checkoutAccessCode" type="button">Ich habe einen Nexus Code</button>
         </div>
       </section>

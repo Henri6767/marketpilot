@@ -481,9 +481,9 @@ const PLAN_CONFIG = {
     name: "Business",
     badge: "Teams",
     monthly: "ab 49,99 €",
-    yearly: "ab 499 €",
+    yearly: "Individuell",
     priceMonthly: "ab 49,99 € pro Monat",
-    priceYearly: "ab 499 € pro Jahr",
+    priceYearly: "Individuelles Jahresangebot",
     audience: "Für Teams, Reports, API und professionelle Workflows.",
     cta: "Kontakt aufnehmen",
     accent: "business",
@@ -583,6 +583,29 @@ const ELITE_LABS_MODULES = [
   "Explain This Chart Pro",
   "ETF Cost Analyzer Pro",
   "Crypto Volatility Monitor Pro"
+];
+
+const STARTER_MODULES = [
+  "Small Watchlist Briefing",
+  "10 Asset Slots",
+  "Basic News Impact",
+  "2-Asset Compare",
+  "5 Price Alerts",
+  "Learning Basic",
+  "7-Day Snapshot"
+];
+
+const PRO_MODULES = [
+  "Watchlist Pulse",
+  "Unlimited AI",
+  "Smart Alerts",
+  "Deep Asset Analysis",
+  "News Impact for Watchlist",
+  "4-Asset Compare",
+  "Report Preview",
+  "Confidence Score",
+  "Asset Notes",
+  "Pro Dashboard"
 ];
 
 const BUSINESS_SUITE_MODULES = [
@@ -944,8 +967,8 @@ function updateProUI() {
   }
   if (selectors.pricingAccessCode) selectors.pricingAccessCode.hidden = state.isProUser;
   if (selectors.proPriceLabel) selectors.proPriceLabel.textContent = state.checkoutPlan === "yearly" ? "119,99 €" : "12,99 €";
-  selectors.resetDemoAccess.hidden = false;
-  selectors.resetDemoAccessLegal.hidden = false;
+  if (selectors.resetDemoAccess) selectors.resetDemoAccess.hidden = true;
+  if (selectors.resetDemoAccessLegal) selectors.resetDemoAccessLegal.hidden = true;
   selectors.assistantQuota.textContent = remainingAssistantQuestions();
   if (selectors.assistantLimit) {
     selectors.assistantLimit.textContent = plan.aiLimit === Infinity ? `Plan: ${plan.name} · unbegrenzte Fragen` : `Plan: ${plan.name} · ${remainingAssistantQuestions()}/${plan.aiLimit} Fragen übrig`;
@@ -966,8 +989,8 @@ function updateProUI() {
     selectors.assistantContextLine.textContent = `${viewLabel} · ${rangeLabel(state.activeRange)} · Risiko ${state.activeAsset.risk} · ${healthLabel(quote?.health)}`;
   }
   selectors.assistantAccessText.textContent = state.isProUser
-    ? `${plan.name}: AI nutzt Watchlist-, News-, Compare- und Risiko-Kontext.`
-    : `Free: noch ${remainingAssistantQuestions()} AI-Fragen heute. Starter erhöht das Limit, Pro schaltet unbegrenzte Analysen frei.`;
+    ? `${plan.name}: AI nutzt Watchlist-, News-, Compare-, Risiko- und Plan-Kontext.`
+    : `Free: noch ${remainingAssistantQuestions()} AI-Fragen heute. Starter erhöht Limits, Pro schaltet unbegrenzte Analysen frei, Elite ergänzt Reports und Szenarien.`;
   document.querySelectorAll("[data-pro-copy]").forEach((item) => {
     item.textContent = state.isProUser ? "Pro aktiv" : item.dataset.proCopy || "Pro";
   });
@@ -992,7 +1015,12 @@ function updateAssistantSuggestions() {
 
 function planButtonLabel(plan) {
   const key = normalizePlan(plan);
-  if (key === state.currentPlan) return "Aktueller Plan";
+  if (key === state.currentPlan) {
+    if (key === "business") return "Business Dashboard öffnen";
+    if (key === "elite") return "Elite Dashboard öffnen";
+    if (key === "pro") return "Pro Dashboard öffnen";
+    return "Aktueller Plan";
+  }
   if (planRank(key) < planRank(state.currentPlan)) return `In ${currentPlanConfig().name} enthalten`;
   if (key === "business") return hasPlan("business") ? "Business Dashboard öffnen" : "Kontakt aufnehmen";
   if (planRank(key) > planRank(state.currentPlan)) return key === "starter" ? "Starter wählen" : `Upgrade auf ${PLAN_CONFIG[key].name}`;
@@ -1009,7 +1037,7 @@ function renderPricing() {
     const active = key === state.currentPlan;
     const lower = planRank(key) < planRank(state.currentPlan);
     const price = cycle === "yearly" ? plan.yearly : plan.monthly;
-    const period = key === "business" ? (cycle === "yearly" ? "pro Jahr" : "pro Monat") : (cycle === "yearly" ? "pro Jahr" : "pro Monat");
+    const period = key === "business" ? (cycle === "yearly" ? "Team-Angebot" : "pro Monat oder individuell") : (cycle === "yearly" ? "pro Jahr" : "pro Monat");
     return `
       <article class="pricing-plan plan-${plan.accent} ${active ? "active-plan" : ""} ${key === "pro" ? "sweet-spot" : ""} ${key === "elite" ? "elite-plan" : ""} ${key === "business" ? "business-plan" : ""}">
         <div class="plan-topline">
@@ -1021,19 +1049,19 @@ function renderPricing() {
           <strong>${escapeHTML(price)}</strong>
           <span>${escapeHTML(period)}</span>
         </div>
-        ${cycle === "yearly" && key !== "free" ? `<span class="saving-badge">2 Monate sparen</span>` : ""}
+        ${cycle === "yearly" && key !== "free" && key !== "business" ? `<span class="saving-badge">2 Monate sparen</span>` : ""}
         <div class="feature-badges">
           ${[
-            key === "pro" ? "Popular" : plan.badge,
-            plan.aiLimit === Infinity ? "Unlimited" : `${plan.aiLimit} AI`,
-            plan.reportLevel.includes("Report") ? "Report" : "Limited"
+            key === "pro" ? "Beliebt" : plan.badge,
+            plan.aiLimit === Infinity ? "Unbegrenzt" : `${plan.aiLimit} AI`,
+            plan.reportLevel.includes("Report") ? "Report" : "Basis"
           ].map((badge) => `<span>${escapeHTML(badge)}</span>`).join("")}
         </div>
         <ul class="plan-features">
           ${plan.features.map((feature) => `<li>${escapeHTML(feature)}</li>`).join("")}
         </ul>
         <details class="plan-more">
-          <summary>Alle Vorteile anzeigen</summary>
+          <summary>Alle Features anzeigen</summary>
           <ul>${plan.hiddenFeatures.map((feature) => `<li>${escapeHTML(feature)}</li>`).join("")}</ul>
         </details>
         <button class="${key === "pro" || key === "elite" ? "primary-action" : "secondary-action"} plan-button" type="button" data-plan-key="${key}" ${active ? "aria-pressed=\"true\"" : ""}>${escapeHTML(planButtonLabel(key))}</button>
@@ -1132,10 +1160,28 @@ function renderPricing() {
       <div class="detail-actions">
         <button class="primary-action" type="button" data-plan-key="${state.currentPlan === "free" ? "pro" : state.currentPlan}">${state.currentPlan === "free" ? "Upgrade" : "Plan verwalten"}</button>
         <button class="secondary-action" type="button" data-open-pricing-code>Nexus Code</button>
-        <button class="link-action" type="button" data-reset-demo-access>Demo-Zugang zurücksetzen</button>
+        <button class="link-action developer-reset" type="button" data-reset-demo-access hidden>Demo-Zugang zurücksetzen</button>
       </div>
     </section>
     <section class="labs-suite-grid">
+      <article class="starter-modules-panel">
+        <div class="section-heading compact">
+          <p class="eyebrow">Starter Module</p>
+          <h2>Kleine Watchlists bekommen echte Struktur.</h2>
+        </div>
+        <div class="module-chip-grid">
+          ${STARTER_MODULES.map((module) => `<button type="button" data-feature-module="basicNewsImpact" class="${hasPlan("starter") ? "unlocked" : "locked"}">${escapeHTML(module)}<span>${hasPlan("starter") ? "Aktiv" : "Starter"}</span></button>`).join("")}
+        </div>
+      </article>
+      <article class="pro-modules-panel">
+        <div class="section-heading compact">
+          <p class="eyebrow">Pro Hub</p>
+          <h2>Der Sweet Spot für tägliche AI-Analyse.</h2>
+        </div>
+        <div class="module-chip-grid">
+          ${PRO_MODULES.map((module) => `<button type="button" data-feature-module="smartAlerts" class="${hasPlan("pro") ? "unlocked" : "locked"}">${escapeHTML(module)}<span>${hasPlan("pro") ? "Aktiv" : "Pro"}</span></button>`).join("")}
+        </div>
+      </article>
       <article class="elite-labs-panel">
         <div class="section-heading compact">
           <p class="eyebrow">Elite Labs</p>
@@ -1177,6 +1223,8 @@ function updateCheckoutUI() {
   const target = PLAN_CONFIG[normalizePlan(state.checkoutTargetPlan)];
   const copy = checkoutPriceCopy();
   selectors.checkoutModal.dataset.plan = normalizePlan(state.checkoutTargetPlan);
+  document.querySelector("#checkoutModal .security-icon").textContent = target.name.slice(0, 2).toUpperCase();
+  document.querySelector("#checkoutModal .security-header .panel-label").textContent = `MarketPilot Nexus ${target.name}`;
   document.querySelector("#checkoutTitle").textContent = `${target.name} starten`;
   document.querySelector(".checkout-copy").textContent = target.audience;
   document.querySelector(".checkout-summary .panel-label").textContent = "Dein Plan";
@@ -1232,7 +1280,7 @@ function startCheckout(plan = "pro", billingCycle = state.checkoutPlan) {
   selectors.checkoutModal.hidden = false;
   selectors.checkoutMessage.textContent = "";
   selectors.completeCheckout.disabled = false;
-  selectors.completeCheckout.textContent = state.currentPlan === normalized ? "Zum Dashboard" : `${PLAN_CONFIG[normalized].name} aktivieren`;
+  selectors.completeCheckout.textContent = state.currentPlan === normalized ? "Zum Dashboard" : "Demo-Kauf abschließen";
   updateCheckoutUI();
 }
 
@@ -2568,14 +2616,14 @@ function openModal(mode, asset, meta = {}) {
   selectors.modalInput.value = mode === "note" ? state.notes[asset.symbol] || "" : mode === "alert" ? state.alerts[asset.symbol] || "" : "";
   selectors.modalInput.parentElement.hidden = mode === "chart" || mode === "pro" || mode === "learning";
   selectors.modalConfirm.hidden = mode === "chart" || mode === "pro" || mode === "learning";
-  selectors.modalKicker.textContent = mode === "note" ? "Watchlist-Notiz" : mode === "chart" ? "Chart Workspace" : mode === "pro" ? "Pro Preview" : mode === "learning" ? "Mini-Lexikon" : "Preisalarm";
-  selectors.modalTitle.textContent = mode === "note" ? `Notiz zu ${asset.name}` : mode === "chart" ? `${asset.name} im Analysemodus` : mode === "pro" ? `${meta.feature || "Pro"} freischalten` : mode === "learning" ? meta.term : `Alarm für ${asset.name}`;
+  selectors.modalKicker.textContent = mode === "note" ? "Watchlist-Notiz" : mode === "chart" ? "Chart Workspace" : mode === "pro" ? "Upgrade Preview" : mode === "learning" ? "Mini-Lexikon" : "Preisalarm";
+  selectors.modalTitle.textContent = mode === "note" ? `Notiz zu ${asset.name}` : mode === "chart" ? `${asset.name} im Analysemodus` : mode === "pro" ? `${meta.feature || "Premium-Modul"} freischalten` : mode === "learning" ? meta.term : `Alarm für ${asset.name}`;
   selectors.modalBody.textContent = mode === "note"
     ? "Speichere eine kurze lokale Notiz. Sie bleibt in diesem Browser verfügbar und unterstützt dein persönliches Briefing."
     : mode === "chart"
       ? `Großer Analysechart mit aktuellem Zeitraum ${state.activeRange.toUpperCase()}, Charttyp ${state.chartType} und aktiven Indikatoren.`
       : mode === "pro"
-        ? `${meta.benefit || "Diese Premium-Funktion erweitert den AI-Kontext um Watchlist, News, Risiko und Vergleichsdaten."} Kaufe Pro oder nutze einen vorhandenen Promo-Code.`
+        ? `${meta.benefit || "Diese Premium-Funktion erweitert den AI-Kontext um Watchlist, News, Risiko und Vergleichsdaten."} Wähle den passenden Plan oder nutze einen vorhandenen Nexus Code.`
         : mode === "learning"
           ? learningCopy(meta.term)
           : "Lege einen Preisalarm an. Der Zielwert bleibt lokal in deinem Browser gespeichert.";
@@ -2583,7 +2631,7 @@ function openModal(mode, asset, meta = {}) {
     const required = PLAN_CONFIG[normalizePlan(state.checkoutTargetPlan)];
     selectors.modalBody.innerHTML = `
       <div class="upgrade-preview">
-        <strong>${escapeHTML(meta.feature || "Pro Feature")}</strong>
+        <strong>${escapeHTML(meta.feature || "Premium Feature")}</strong>
         <p>${escapeHTML(meta.benefit || required.audience)}</p>
         <ul>
           <li>Benötigter Plan: ${escapeHTML(meta.requiredPlan || required.name)}</li>
@@ -3504,6 +3552,7 @@ document.querySelector("#briefing").addEventListener("click", (event) => {
 
 document.querySelectorAll(".plan-button").forEach((button) => {
   button.addEventListener("click", () => {
+    if (!button.dataset.plan) return;
     if (button.dataset.plan === "Pro") {
       if (state.isProUser) {
         setActiveView("pro");
@@ -3543,10 +3592,11 @@ document.querySelector("#pricing")?.addEventListener("click", (event) => {
   if (featureModule) {
     const feature = featureModule.dataset.featureModule;
     const required = getUpgradeTargetForFeature(feature);
+    const moduleName = featureModule.textContent.replace(/Aktiv|Starter|Pro|Elite|Business/g, "").trim();
     if (hasPlan(required)) {
-      showToast(`${featureModule.textContent.replace(/Aktiv|Elite|Business/g, "").trim()} ist freigeschaltet.`);
+      showToast(`${moduleName} ist freigeschaltet.`);
     } else {
-      openUpgradeModal(required, featureModule.textContent.replace(/Elite|Business/g, "").trim(), featureUpgradeCopy(feature));
+      openUpgradeModal(required, moduleName, featureUpgradeCopy(feature));
     }
     return;
   }
@@ -3563,6 +3613,12 @@ document.querySelector("#pricing")?.addEventListener("click", (event) => {
   if (!planButton) return;
   const plan = normalizePlan(planButton.dataset.planKey);
   if (plan === state.currentPlan) {
+    if (hasPlan("pro")) {
+      setActiveView("pro");
+      window.setTimeout(() => document.querySelector("#proDashboard")?.scrollIntoView({ behavior: "smooth", block: "start" }), 250);
+      runProDashboardAction("assistant");
+      return;
+    }
     showToast(`${PLAN_CONFIG[plan].name} ist dein aktueller Plan.`);
     return;
   }
@@ -3678,7 +3734,7 @@ function resetDemoAccess() {
   updateProUI();
   renderPricing();
   renderPremiumModules();
-  showToast("Developer Access zurückgesetzt.");
+  showToast("Demo-Zugang zurückgesetzt.");
 }
 
 selectors.redeemAccessCode.addEventListener("click", redeemAccessCode);
@@ -3690,7 +3746,7 @@ selectors.resetDemoAccessLegal.addEventListener("click", resetDemoAccess);
 selectors.openProDashboard?.addEventListener("click", () => {
   if (!state.isProUser) {
     openCheckout(state.checkoutPlan);
-    showToast("Pro kaufen. Code optional im Checkout.");
+    showToast("Upgrade geöffnet. Code optional im Checkout.");
     return;
   }
   runProDashboardAction("assistant");
